@@ -39,5 +39,6 @@ Tested locally against n8n 1.105.4
 * August 8, 2025 - 0.1.2 - First.
 * August 8, 2025 - 0.1.3 - Fixed AI Agent tool usage.
 * August 9, 2025 - 0.1.4 - Updated names and added credential test.
+* August 9, 2025 - 0.1.5 - Fixed query body to pass the correct value.
 
 
