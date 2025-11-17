@@ -1,6 +1,6 @@
 {
-	"name": "n8n-nodes-gleanclient",
-	"version": "0.1.6",
+	"name": "@gleanwork/n8n-nodes-gleanclient",
+	"version": "0.2.0",
 	"description": "n8n nodes to interact with Glean",
 	"keywords": [
 		"n8n-community-node-package"
@@ -13,7 +13,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/djuang1/n8n-nodes-gleanclient.git"
+		"url": "https://github.com/gleanwork/n8n-nodes-gleanclient.git"
 	},
 	"engines": {
 		"node": ">=20.15"

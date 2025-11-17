@@ -1,6 +1,8 @@
-# n8n-nodes-gleanclient
+# @gleanwork/n8n-nodes-gleanclient
 
 This is an n8n community node. It lets you use the [Glean Client API](https://developers.glean.com/api/client-api/search/search) in your n8n workflows.
+
+> **Note**: This package was previously published as `n8n-nodes-gleanclient`. Please update to `@gleanwork/n8n-nodes-gleanclient` for the latest version.
 
 The Glean Work AI platform lets you embed enterprise search, chat, and agent capabilities into your applications while honoring source‑system permissions by default.
 
@@ -36,9 +38,11 @@ Tested locally against n8n 1.105.4
 
 ## Version history
 
-* August 8, 2025 - 0.1.2 - First.
-* August 8, 2025 - 0.1.3 - Fixed AI Agent tool usage.
-* August 9, 2025 - 0.1.4 - Updated names and added credential test.
+* November 17, 2025 - 0.2.0 - Migrated to @gleanwork npm organization, updated repository to gleanwork GitHub org.
+* August 9, 2025 - 0.1.6 - Minor updates.
 * August 9, 2025 - 0.1.5 - Fixed query body to pass the correct value.
+* August 9, 2025 - 0.1.4 - Updated names and added credential test.
+* August 8, 2025 - 0.1.3 - Fixed AI Agent tool usage.
+* August 8, 2025 - 0.1.2 - First.
 
 
