@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#MISE description="Copy icon files to dist directory"
+
+set -euo pipefail
+
+find nodes -type f \( -name '*.svg' -o -name '*.png' \) | while read -r file; do
+  target="dist/$file"
+  mkdir -p "$(dirname "$target")"
+  cp "$file" "$target"
+done
+
+find credentials -type f \( -name '*.svg' -o -name '*.png' \) | while read -r file; do
+  target="dist/$file"
+  mkdir -p "$(dirname "$target")"
+  cp "$file" "$target"
+done
