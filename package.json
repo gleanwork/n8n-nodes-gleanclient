@@ -21,9 +21,9 @@
 	"scripts": {
 		"build": "npx rimraf dist && tsc && gulp build:icons",
 		"dev": "tsc --watch",
-		"format": "prettier nodes credentials --write",
+		"format": "prettier . --write",
 		"lint": "eslint nodes credentials package.json",
-		"lintfix": "eslint nodes credentials package.json --fix",
+		"lint:fix": "eslint nodes credentials package.json --fix",
 		"prepublishOnly": "npm run build && eslint -c .eslintrc.prepublish.js nodes credentials package.json"
 	},
 	"files": [
