@@ -18,13 +18,14 @@
 	"engines": {
 		"node": ">=20.15"
 	},
+	"packageManager": "pnpm@^10.0.0",
 	"scripts": {
 		"build": "npx rimraf dist && tsc && mise run copy-icons",
 		"dev": "tsc --watch",
 		"format": "prettier . --write",
 		"lint": "eslint nodes credentials package.json",
 		"lint:fix": "eslint nodes credentials package.json --fix",
-		"prepublishOnly": "npm run build && eslint -c .eslintrc.prepublish.js nodes credentials package.json"
+		"prepublishOnly": "pnpm run build && eslint -c .eslintrc.prepublish.js nodes credentials package.json"
 	},
 	"files": [
 		"dist"
