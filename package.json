@@ -18,14 +18,13 @@
 	"engines": {
 		"node": ">=20.15"
 	},
-	"main": "index.js",
 	"scripts": {
 		"build": "npx rimraf dist && tsc && gulp build:icons",
 		"dev": "tsc --watch",
 		"format": "prettier nodes credentials --write",
 		"lint": "eslint nodes credentials package.json",
 		"lintfix": "eslint nodes credentials package.json --fix",
-		"prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json"
+		"prepublishOnly": "npm run build && eslint -c .eslintrc.prepublish.js nodes credentials package.json"
 	},
 	"files": [
 		"dist"
