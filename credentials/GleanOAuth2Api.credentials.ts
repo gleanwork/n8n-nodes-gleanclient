@@ -47,12 +47,12 @@ export class GleanOAuth2Api implements ICredentialType {
       type: 'hidden',
       default: '',
     },
-    // triggers:read/write don't exist on real Glean yet; use a real granted scope for the demo token.
+    // The trigger APIs require these scopes; Glean must expose them (like the /api/triggers endpoints).
     {
       displayName: 'Scope',
       name: 'scope',
       type: 'hidden',
-      default: 'search',
+      default: 'triggers:read triggers:write',
     },
     {
       displayName: 'Auth URI Query Parameters',

@@ -13,7 +13,7 @@ function resolveCredentialType(
 	ctx: IHookFunctions | IWebhookFunctions | ILoadOptionsFunctions,
 ): string {
 	try {
-		const auth = ctx.getNodeParameter('authentication', 0) as string;
+		const auth = ctx.getNodeParameter('authentication', 'oAuth2') as string;
 		if (auth === 'oAuth2') return 'gleanOAuth2Api';
 	} catch {
 		// authentication param not available in this context; fall through to default
