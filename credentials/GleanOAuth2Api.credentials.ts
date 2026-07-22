@@ -13,7 +13,7 @@ export class GleanOAuth2Api implements ICredentialType {
       displayName: 'Glean Deployment URL',
       name: 'baseUrl',
       type: 'string',
-      default: 'http://localhost:4545',
+      default: 'https://scio-prod-be.glean.com',
       description: 'Your Glean deployment URL (used for the trigger API calls and OAuth endpoints)',
     },
     // ---- everything below is fixed by the app and hidden from the user ----
