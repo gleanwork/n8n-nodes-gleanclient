@@ -33,13 +33,16 @@
 	"n8n": {
 		"n8nNodesApiVersion": 1,
 		"credentials": [
-			"dist/credentials/GleanClientApi.credentials.js"
+			"dist/credentials/GleanClientApi.credentials.js",
+			"dist/credentials/GleanOAuth2Api.credentials.js"
 		],
 		"nodes": [
-			"dist/nodes/GleanClient/GleanClient.node.js"
+			"dist/nodes/GleanClient/GleanClient.node.js",
+			"dist/nodes/GleanTrigger/GleanTrigger.node.js"
 		]
 	},
 	"devDependencies": {
+		"@types/node": "^25.9.2",
 		"@typescript-eslint/parser": "~8.32.0",
 		"eslint": "^8.57.0",
 		"eslint-plugin-n8n-nodes-base": "^1.16.3",

@@ -38,8 +38,8 @@ export class GleanClientApi implements ICredentialType {
   test: ICredentialTestRequest = {
     request: {
       baseURL: '={{$credentials.baseUrl}}',
-      url: '/rest/api/v1/search',
-      method: 'POST',
+      url: '/api/trigger-presets',
+      method: 'GET',
     },
   };
 }
