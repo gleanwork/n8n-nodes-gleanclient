@@ -15,15 +15,24 @@ interface Preset {
 
 // Friendly datasource labels so the picker reads well and groups by source.
 const DATASOURCE_LABELS: Record<string, string> = {
-	jira: 'Jira',
-	gmailnative: 'Gmail',
-	outlook: 'Outlook',
-	slack: 'Slack',
-	salescloud: 'Salesforce',
-	gong: 'Gong',
+	artifacts: 'Artifacts',
 	confluence: 'Confluence',
-	github: 'GitHub',
 	gdrive: 'Google Drive',
+	github: 'GitHub',
+	gmailnative: 'Gmail',
+	gong: 'Gong',
+	googlecalendar: 'Google Calendar',
+	greenhouse: 'Greenhouse',
+	intercom: 'Intercom',
+	jira: 'Jira',
+	o365onedrive: 'OneDrive',
+	o365sharepoint: 'SharePoint',
+	outlook: 'Outlook',
+	outlookcalendar: 'Outlook Calendar',
+	salescloud: 'Salesforce',
+	slack: 'Slack',
+	zendesk: 'Zendesk',
+	zoom: 'Zoom',
 };
 
 // Extract the preset id from a resourceLocator value (or a plain string).
@@ -62,10 +71,12 @@ export async function getPresetInputs(this: ILoadOptionsFunctions): Promise<INod
 	if (!presetId) return [];
 
 	const response = await gleanApiRequest.call(this, 'GET', `/trigger-presets/${presetId}`);
-	const preset = (response.preset as Preset) ?? (response as unknown as Preset);
+	// TriggerPresetGetResponse: { trigger_preset: {...}, request_id }. inputs may be null.
+	const preset = (response.trigger_preset as Preset) ?? (response as unknown as Preset);
 	const inputs = preset.inputs ?? [];
-	return inputs.map((i) => ({
-		name: i.required ? `${i.label ?? i.field} (required)` : (i.label ?? i.field),
-		value: i.field,
-	}));
+	return inputs.map((i) => {
+		// label may be an empty string; fall back to the field name.
+		const label = i.label || i.field;
+		return { name: i.required ? `${label} (required)` : label, value: i.field };
+	});
 }

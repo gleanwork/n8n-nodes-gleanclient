@@ -16,7 +16,8 @@ export class GleanClientApi implements ICredentialType {
       displayName: 'Base URL',
       name: 'baseUrl',
       type: 'string',
-      default: 'https://support-lab-be.glean.com',
+      // exp-QE base; the host and the /qe-glean-exp/<pod> path change per deployment.
+      default: 'https://scio-prod-be.glean.com/qe-glean-exp/707',
     },
     {
       displayName: 'API Key',

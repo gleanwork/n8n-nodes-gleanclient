@@ -13,8 +13,9 @@ export class GleanOAuth2Api implements ICredentialType {
       displayName: 'Glean Deployment URL',
       name: 'baseUrl',
       type: 'string',
-      default: 'https://scio-prod-be.glean.com',
-      description: 'Your Glean deployment URL (used for the trigger API calls and OAuth endpoints)',
+      // exp-QE base; the host and the /qe-glean-exp/<pod> path change per deployment.
+      default: 'https://scio-prod-be.glean.com/qe-glean-exp/707',
+      description: 'Base URL for the trigger API (the node calls {baseUrl}/api/...). Changes per deployment.',
     },
     // ---- everything below is fixed by the app and hidden from the user ----
     {

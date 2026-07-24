@@ -177,8 +177,9 @@ export class GleanTrigger implements INodeType {
 
 				const response = await gleanApiRequest.call(this, 'POST', '/triggers', body);
 				const trigger = response.trigger as IDataObject | undefined;
-				const secret = response.secret as IDataObject | undefined;
-				const signingSecret = secret?.signing_secret as string | undefined;
+				// TriggerCreateResponse: { trigger: TriggerWithSecret }. signing_secret is on
+				// the trigger object and returned only at creation.
+				const signingSecret = trigger?.signing_secret as string | undefined;
 
 				if (!trigger?.trigger_id || !signingSecret) {
 					throw new NodeOperationError(
