@@ -1,4 +1,4 @@
-import { INodeType, INodeTypeDescription, NodeConnectionType } from 'n8n-workflow';
+import { INodeType, INodeTypeDescription, NodeConnectionTypes } from 'n8n-workflow';
 
 export class GleanClient implements INodeType {
   description: INodeTypeDescription = {
@@ -13,8 +13,8 @@ export class GleanClient implements INodeType {
       name: 'Glean',
     },
     usableAsTool: true,
-    inputs: [NodeConnectionType.Main],
-    outputs: [NodeConnectionType.Main],
+    inputs: [NodeConnectionTypes.Main],
+    outputs: [NodeConnectionTypes.Main],
     credentials: [
       {
         name: 'gleanClientApi',
