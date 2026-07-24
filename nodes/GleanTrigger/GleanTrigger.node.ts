@@ -113,14 +113,6 @@ export class GleanTrigger implements INodeType {
 					},
 				],
 			},
-			{
-				displayName: 'Description',
-				name: 'triggerDescription',
-				type: 'string',
-				default: '',
-				placeholder: 'e.g. High-priority Jira bugs in ENG',
-				description: 'Human-friendly label stored on the trigger in Glean. Auto-generated if left blank.',
-			},
 		],
 	};
 
@@ -159,21 +151,18 @@ export class GleanTrigger implements INodeType {
 				const inputsRaw = this.getNodeParameter('inputs', {}) as {
 					input?: Array<{ field: string; value: string }>;
 				};
-				const description = this.getNodeParameter('triggerDescription', '') as string;
 
 				const inputs: IDataObject = {};
 				for (const i of inputsRaw.input ?? []) {
 					inputs[i.field] = i.value;
 				}
 
+				// description omitted: the API does not round-trip it today (see brain discrepancies doc).
 				const body: IDataObject = {
 					preset_id: preset,
 					inputs,
 					delivery: { webhook_url: webhookUrl },
 				};
-				if (description) {
-					body.description = description;
-				}
 
 				const response = await gleanApiRequest.call(this, 'POST', '/triggers', body);
 				const trigger = response.trigger as IDataObject | undefined;
