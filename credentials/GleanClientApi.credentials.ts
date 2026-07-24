@@ -8,15 +8,14 @@ import {
 export class GleanClientApi implements ICredentialType {
   name = 'gleanClientApi';
   displayName = 'Glean Client API';
-  // Uses the link to this tutorial as an example
-  // Replace with your own docs links when building your own nodes
   documentationUrl = 'https://developers.glean.com/api-info/client/getting-started/overview';
   properties: INodeProperties[] = [
     {
       displayName: 'Base URL',
       name: 'baseUrl',
       type: 'string',
-      default: 'https://support-lab-be.glean.com',
+      // exp-QE base; the host and the /qe-glean-exp/<pod> path change per deployment.
+      default: 'https://scio-prod-be.glean.com/qe-glean-exp/707',
     },
     {
       displayName: 'API Key',
@@ -38,8 +37,8 @@ export class GleanClientApi implements ICredentialType {
   test: ICredentialTestRequest = {
     request: {
       baseURL: '={{$credentials.baseUrl}}',
-      url: '/rest/api/v1/search',
-      method: 'POST',
+      url: '/api/trigger-presets',
+      method: 'GET',
     },
   };
 }

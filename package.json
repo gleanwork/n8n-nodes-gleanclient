@@ -33,7 +33,8 @@
 	"n8n": {
 		"n8nNodesApiVersion": 1,
 		"credentials": [
-			"dist/credentials/GleanClientApi.credentials.js"
+			"dist/credentials/GleanClientApi.credentials.js",
+			"dist/credentials/GleanOAuth2Api.credentials.js"
 		],
 		"nodes": [
 			"dist/nodes/GleanClient/GleanClient.node.js"
