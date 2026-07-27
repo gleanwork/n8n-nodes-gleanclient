@@ -29,9 +29,9 @@ This is an n8n community node package that integrates the Glean Client API into 
 
 #### Linting & Formatting
 
-- **Linter**: ESLint with n8n-specific rules (`eslint-plugin-n8n-nodes-base`)
+- **Linter**: ESLint (flat config) via `pnpm run lint` (`n8n-node lint`), using the n8n community-node rules bundled with `@n8n/node-cli`
 - **Always run before commit**: `pnpm run lint:fix`
-- **Prepublish validation**: Stricter ESLint rules apply via `.eslintrc.prepublish.js`
+- **Prepublish validation**: `pnpm run prepublishOnly` runs `n8n-node prerelease`
 - **Formatter**: Prettier for consistent style
 - **Format before committing**: `pnpm run format`
 
@@ -113,7 +113,7 @@ Only add packages that are necessary. Justify new dependencies as they increase 
 - **Automatic on publish**: `prepublishOnly` runs automatically when you run `pnpm publish`
 - **Manual validation** (optional, recommended): Run `pnpm run prepublishOnly` beforehand to catch errors early
   - Full TypeScript build
-  - ESLint validation with stricter prepublish rules
+  - ESLint validation (`n8n-node prerelease`)
 - Verify `dist/` folder contains compiled `.js` and `.d.ts` files
 - Check that no linting errors appear
 
