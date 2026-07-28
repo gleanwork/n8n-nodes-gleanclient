@@ -1,0 +1,68 @@
+# Publishes to npm with provenance via `n8n-node release`, on version tags.
+#
+# Provenance is a signed attestation tying the published tarball to this repo +
+# workflow + commit; it is required for n8n Creator Portal verification (from
+# 2026-05-01). See https://docs.npmjs.com/generating-provenance-statements
+#
+# Auth (one-time). Recommended: OIDC Trusted Publisher on npmjs.com (leave
+# NPM_TOKEN unset) — no long-lived secret. Fallback: set an NPM_TOKEN repo
+# secret. See:
+# https://docs.n8n.io/integrations/community-nodes/building-community-nodes
+#
+# Release flow: run `pnpm run release` locally to bump/changelog/tag/push; the
+# tag push triggers this workflow, which publishes with provenance.
+name: Publish
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+permissions:
+  id-token: write # required for npm provenance + OIDC trusted publishing
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Release (build, lint, publish with provenance)
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+          fi
+          pnpm run release
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # Runs n8n's official community-node scanner against the just-published
+  # version. The scanner only accepts a published package name, so this is a
+  # post-publish gate (retries to allow for npm registry propagation).
+  verify:
+    name: Verify with n8n community-node scanner
+    needs: publish
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan published package
+        run: |
+          pkg="@gleanwork/n8n-nodes-gleanclient@${GITHUB_REF_NAME}"
+          for i in $(seq 1 5); do
+            out=$(npx --yes @n8n/scan-community-package "$pkg" 2>&1 || true)
+            echo "$out"
+            if echo "$out" | grep -q "passed all security checks"; then
+              exit 0
+            fi
+            echo "attempt $i did not pass (package may not be propagated yet); retrying in 15s"
+            sleep 15
+          done
+          echo "::error::community-package scan did not pass"
+          exit 1
