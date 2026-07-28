@@ -56,5 +56,11 @@
 	},
 	"peerDependencies": {
 		"n8n-workflow": "*"
+	},
+	"pnpm": {
+		"overrides": {
+			"form-data": ">=4.0.6",
+			"lodash": ">=4.18.1"
+		}
 	}
 }
