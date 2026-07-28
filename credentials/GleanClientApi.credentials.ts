@@ -3,11 +3,13 @@ import {
   ICredentialType,
   INodeProperties,
   ICredentialTestRequest,
+  Icon,
 } from 'n8n-workflow';
 
 export class GleanClientApi implements ICredentialType {
   name = 'gleanClientApi';
   displayName = 'Glean Client API';
+  icon: Icon = { light: 'file:../icons/glean.svg', dark: 'file:../icons/glean-dark.svg' };
   // Uses the link to this tutorial as an example
   // Replace with your own docs links when building your own nodes
   documentationUrl = 'https://developers.glean.com/api-info/client/getting-started/overview';
