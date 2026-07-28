@@ -1,0 +1,6 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["nodes/**/*.node.ts", "credentials/**/*.credentials.ts", "scripts/**/*.mjs"],
+  "project": ["nodes/**/*.ts", "credentials/**/*.ts", "scripts/**/*.mjs"],
+  "ignoreDependencies": ["prettier", "release-it"]
+}

@@ -1,0 +1,31 @@
+version: 2
+
+updates:
+  # npm dependencies (addresses the vulnerabilities flagged on the default branch).
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    # Wait 14 days after an upstream release before proposing it, so
+    # unpublished/compromised fresh versions get shaken out first.
+    cooldown:
+      default-days: 14
+    assignees:
+      - ashish-kumar2-glean
+      - chris-freeman-glean
+    groups:
+      dev-dependencies:
+        dependency-type: development
+
+  # Keep the GitHub Actions used by these workflows patched.
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 14
+    assignees:
+      - ashish-kumar2-glean
+      - chris-freeman-glean
