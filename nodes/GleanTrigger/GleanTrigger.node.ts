@@ -11,7 +11,12 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 
-import { gleanApiRequest, verifyStandardWebhookSignature, is404 } from './GleanTriggerHelpers';
+import {
+	gleanApiRequest,
+	verifyStandardWebhookSignature,
+	is404,
+	replayRecentEvent,
+} from './GleanTriggerHelpers';
 import { searchPresets, getPresetInputs } from './GleanTriggerLoadOptions';
 import { TRIGGERS_PATH, WEBHOOK_RESPONSES, triggerPath } from './constants';
 
@@ -25,6 +30,17 @@ export class GleanTrigger implements INodeType {
 		usableAsTool: true,
 		subtitle: '={{$parameter["preset"]["cachedResultName"] || $parameter["preset"]["value"] || $parameter["preset"]}}',
 		description: 'Starts the workflow when a Glean content trigger fires',
+		triggerPanel: {
+			header: 'Replay a recent Glean event',
+			executionsHelp: {
+				inactive:
+					"Click 'execute step' to replay your most recent matching event, instead of waiting for Glean to deliver a new one. Turn off <b>Replay Recent Event on Test</b> to wait for a live event.<br /><br />Once published, every matching event triggers an execution — those appear in the <a data-key='executions'>executions list</a>, not here.",
+				active:
+					"Click 'execute step' to replay your most recent matching event.<br /><br />This workflow is published, so live events also trigger executions — those appear in the <a data-key='executions'>executions list</a>, not here.",
+			},
+			activationHint:
+				"Publish the workflow to receive live Glean events (you won't see those executions here).",
+		},
 		defaults: {
 			name: 'Glean Trigger',
 		},
@@ -117,6 +133,14 @@ export class GleanTrigger implements INodeType {
 					},
 				],
 			},
+			{
+				displayName: 'Replay Recent Event on Test',
+				name: 'replayOnTest',
+				type: 'boolean',
+				default: true,
+				description:
+					'Whether to replay your most recent matching event when testing, instead of waiting for Glean to deliver a new one. Does not affect active workflows.',
+			},
 		],
 	};
 
@@ -194,6 +218,15 @@ export class GleanTrigger implements INodeType {
 
 				webhookData.triggerId = trigger.trigger_id as string;
 				webhookData.secret = signingSecret;
+
+				// Test only, best-effort: falls back to waiting for a real event.
+				if (
+					this.getMode() === 'manual' &&
+					webhookUrl &&
+					this.getNodeParameter('replayOnTest', true)
+				) {
+					void replayRecentEvent.call(this, webhookUrl, signingSecret, preset).catch(() => {});
+				}
 				return true;
 			},
 

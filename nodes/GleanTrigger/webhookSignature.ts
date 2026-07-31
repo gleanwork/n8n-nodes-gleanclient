@@ -17,6 +17,20 @@ interface WebhookSignatureInput {
 	toleranceSeconds?: number;
 }
 
+// Builds a Standard Webhooks signature header value for a payload.
+export function signWebhookPayload(
+	secret: string,
+	id: string,
+	timestamp: string,
+	rawBody: string,
+): string {
+	const keyBytes = Buffer.from(secret.slice(SECRET_PREFIX.length), 'base64');
+	const signature = createHmac('sha256', keyBytes)
+		.update(`${id}.${timestamp}.${rawBody}`)
+		.digest('base64');
+	return `${SIGNATURE_VERSION},${signature}`;
+}
+
 // Verifies a Standard Webhooks signature: HMAC-SHA256 over `{id}.{timestamp}.{rawBody}`.
 export function verifyWebhookSignature(input: WebhookSignatureInput): boolean {
 	const {

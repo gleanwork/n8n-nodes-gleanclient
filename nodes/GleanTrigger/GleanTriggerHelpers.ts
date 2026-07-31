@@ -1,14 +1,23 @@
-import type {
-	IHookFunctions,
-	IWebhookFunctions,
-	ILoadOptionsFunctions,
-	IHttpRequestMethods,
-	IHttpRequestOptions,
-	IDataObject,
+import {
+	type IHookFunctions,
+	type IWebhookFunctions,
+	type ILoadOptionsFunctions,
+	type IHttpRequestMethods,
+	type IHttpRequestOptions,
+	type IDataObject,
+	sleep,
 } from 'n8n-workflow';
 
-import { verifyWebhookSignature } from './webhookSignature';
-import { CREDENTIAL_API_KEY, CREDENTIAL_OAUTH2 } from './constants';
+import { randomUUID } from 'crypto';
+
+import { signWebhookPayload, verifyWebhookSignature } from './webhookSignature';
+import {
+	CREDENTIAL_API_KEY,
+	CREDENTIAL_OAUTH2,
+	LIST_EVENTS_PATH,
+	REPLAY_DELAY_MS,
+	presetPath,
+} from './constants';
 
 // Robust 404 check across the shapes n8n/HTTP errors can take.
 export function is404(error: unknown): boolean {
@@ -61,9 +70,10 @@ export async function gleanApiRequest(
 	const credentials = await this.getCredentials(credentialType);
 	const baseUrl = resolveBaseUrl(credentials);
 
+	// Platform trigger endpoints live under /api; client API paths are passed in full.
 	const options: IHttpRequestOptions = {
 		method,
-		url: `${baseUrl}/api${path}`,
+		url: `${baseUrl}${path.startsWith('/rest/') ? '' : '/api'}${path}`,
 		qs,
 		json: true,
 	};
@@ -77,6 +87,45 @@ export async function gleanApiRequest(
 		credentialType,
 		options,
 	)) as IDataObject;
+}
+
+// Delivers the latest matching event, signed, to our own test webhook so testing
+// doesn't wait on Glean. Still goes through the real webhook path.
+export async function replayRecentEvent(
+	this: IHookFunctions,
+	webhookUrl: string,
+	secret: string,
+	presetId: string,
+): Promise<void> {
+	const presetResponse = await gleanApiRequest.call(this, 'GET', presetPath(presetId));
+	const datasource = (presetResponse.trigger_preset as IDataObject | undefined)?.datasource as
+		| string
+		| undefined;
+
+	const events = await gleanApiRequest.call(this, 'POST', LIST_EVENTS_PATH, {
+		filter: datasource ? { datasources: [datasource] } : {},
+		requestOptions: { pageSize: 1 },
+	});
+	const event = (events.events as IDataObject[] | undefined)?.[0];
+	if (!event) return;
+
+	const rawBody = JSON.stringify(event);
+	const id = `msg_replay_${randomUUID()}`;
+	const timestamp = Math.floor(Date.now() / 1000).toString();
+
+	await sleep(REPLAY_DELAY_MS);
+
+	await this.helpers.httpRequest({
+		method: 'POST',
+		url: webhookUrl,
+		body: rawBody,
+		headers: {
+			'content-type': 'application/json',
+			'webhook-id': id,
+			'webhook-timestamp': timestamp,
+			'webhook-signature': signWebhookPayload(secret, id, timestamp, rawBody),
+		},
+	});
 }
 
 export function verifyStandardWebhookSignature(this: IWebhookFunctions, secret: string): boolean {
