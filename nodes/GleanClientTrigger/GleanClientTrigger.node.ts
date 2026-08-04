@@ -11,8 +11,8 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 
-import { gleanApiRequest, verifyStandardWebhookSignature, is404 } from './GleanTriggerHelpers';
-import { searchPresets, getPresetInputs, getTimeOffsets } from './GleanTriggerLoadOptions';
+import { gleanApiRequest, verifyStandardWebhookSignature, is404 } from './GleanClientTriggerHelpers';
+import { searchPresets, getPresetInputs, getTimeOffsets } from './GleanClientTriggerLoadOptions';
 import {
 	TRIGGERS_PATH,
 	WEBHOOK_RESPONSES,
@@ -21,10 +21,10 @@ import {
 	TIME_OFFSET_FIELD,
 } from './constants';
 
-export class GleanTrigger implements INodeType {
+export class GleanClientTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Glean Trigger',
-		name: 'gleanTrigger',
+		name: 'gleanClientTrigger',
 		icon: { light: 'file:../../icons/glean.svg', dark: 'file:../../icons/glean-dark.svg' },
 		group: ['trigger'],
 		version: 1,
