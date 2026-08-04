@@ -12,8 +12,14 @@ import {
 } from 'n8n-workflow';
 
 import { gleanApiRequest, verifyStandardWebhookSignature, is404 } from './GleanTriggerHelpers';
-import { searchPresets, getPresetInputs } from './GleanTriggerLoadOptions';
-import { TRIGGERS_PATH, WEBHOOK_RESPONSES, triggerPath } from './constants';
+import { searchPresets, getPresetInputs, getTimeOffsets } from './GleanTriggerLoadOptions';
+import {
+	TRIGGERS_PATH,
+	WEBHOOK_RESPONSES,
+	triggerPath,
+	presetPath,
+	TIME_OFFSET_FIELD,
+} from './constants';
 
 export class GleanTrigger implements INodeType {
 	description: INodeTypeDescription = {
@@ -81,6 +87,18 @@ export class GleanTrigger implements INodeType {
 				],
 			},
 			{
+				displayName: 'Time Before Event Name or ID',
+				name: 'timeOffset',
+				type: 'options',
+				default: '',
+				description:
+					'For schedule triggers (e.g. before a calendar event), how far ahead to fire. Leave empty for non-schedule triggers. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+				typeOptions: {
+					loadOptionsMethod: 'getTimeOffsets',
+					loadOptionsDependsOn: ['preset'],
+				},
+			},
+			{
 				displayName: 'Inputs',
 				name: 'inputs',
 				type: 'fixedCollection',
@@ -126,6 +144,7 @@ export class GleanTrigger implements INodeType {
 		},
 		loadOptions: {
 			getPresetInputs,
+			getTimeOffsets,
 		},
 	};
 
@@ -171,6 +190,26 @@ export class GleanTrigger implements INodeType {
 				const inputs: IDataObject = {};
 				for (const i of inputsRaw.input ?? []) {
 					inputs[i.field] = i.value;
+				}
+				const timeOffset = this.getNodeParameter('timeOffset', '') as string;
+				if (timeOffset) {
+					inputs[TIME_OFFSET_FIELD] = timeOffset;
+				}
+
+				// Fail fast with a clear message if a required input is missing, rather than a backend 400.
+				const presetResp = await gleanApiRequest.call(this, 'GET', presetPath(preset));
+				const presetSchema =
+					(presetResp.trigger_preset as {
+						inputs?: Array<{ field: string; label?: string; required?: boolean }>;
+					}) ?? {};
+				const missing = (presetSchema.inputs ?? [])
+					.filter((i) => i.required && !inputs[i.field])
+					.map((i) => i.label || i.field);
+				if (missing.length > 0) {
+					throw new NodeOperationError(
+						this.getNode(),
+						`Missing required input(s) for this trigger: ${missing.join(', ')}`,
+					);
 				}
 
 				const body: IDataObject = {

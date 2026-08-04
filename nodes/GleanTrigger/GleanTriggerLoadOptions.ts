@@ -4,7 +4,13 @@ import type {
 	INodeListSearchResult,
 } from 'n8n-workflow';
 import { gleanApiRequest } from './GleanTriggerHelpers';
-import { MAX_PRESET_PAGES, PRESET_PAGE_SIZE, TRIGGER_PRESETS_PATH, presetPath } from './constants';
+import {
+	MAX_PRESET_PAGES,
+	PRESET_PAGE_SIZE,
+	TIME_OFFSET_FIELD,
+	TRIGGER_PRESETS_PATH,
+	presetPath,
+} from './constants';
 
 interface Preset {
 	preset_id: string;
@@ -12,6 +18,7 @@ interface Preset {
 	display_name?: string;
 	description?: string;
 	inputs?: Array<{ field: string; label?: string; required?: boolean }>;
+	time_offsets?: number[];
 }
 
 // Friendly datasource labels so the picker reads well and groups by source.
@@ -83,10 +90,34 @@ export async function getPresetInputs(this: ILoadOptionsFunctions): Promise<INod
 	const response = await gleanApiRequest.call(this, 'GET', presetPath(presetId));
 	// TriggerPresetGetResponse: { trigger_preset: {...}, request_id }. inputs may be null.
 	const preset = (response.trigger_preset as Preset) ?? (response as unknown as Preset);
-	const inputs = preset.inputs ?? [];
+	// time_offset is handled by the dedicated "Time Before Event" dropdown, not the generic inputs.
+	const inputs = (preset.inputs ?? []).filter((i) => i.field !== TIME_OFFSET_FIELD);
 	return inputs.map((i) => {
 		// label may be an empty string; fall back to the field name.
 		const label = i.label || i.field;
 		return { name: i.required ? `${label} (required)` : label, value: i.field };
 	});
+}
+
+// GET /api/trigger-presets/{preset_id} -> allowed schedule offsets as friendly options.
+// Empty for non-schedule presets (they have no time_offsets).
+export async function getTimeOffsets(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+	const presetId = presetIdFrom(this.getCurrentNodeParameter('preset'));
+	if (!presetId) return [];
+
+	const response = await gleanApiRequest.call(this, 'GET', presetPath(presetId));
+	const preset = (response.trigger_preset as Preset) ?? (response as unknown as Preset);
+	return (preset.time_offsets ?? []).map((seconds) => ({
+		name: humanizeOffset(seconds),
+		value: String(seconds),
+	}));
+}
+
+function humanizeOffset(seconds: number): string {
+	const minutes = Math.round(seconds / 60);
+	if (minutes % 60 === 0) {
+		const hours = minutes / 60;
+		return `${hours} hour${hours === 1 ? '' : 's'} before`;
+	}
+	return `${minutes} minutes before`;
 }
