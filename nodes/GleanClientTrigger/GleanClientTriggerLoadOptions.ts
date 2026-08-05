@@ -18,7 +18,7 @@ interface Preset {
 	datasource?: string;
 	display_name?: string;
 	description?: string;
-	inputs?: Array<{ field: string; label?: string; required?: boolean }>;
+	inputs?: Array<{ field: string; label?: string; required?: boolean; allowed_values?: string[] }>;
 	time_offsets?: number[];
 }
 
@@ -104,15 +104,24 @@ export async function getPresetInputFields(
 	if (!preset) return { fields: [] };
 	const fields: ResourceMapperField[] = (preset.inputs ?? [])
 		.filter((i) => i.field !== TIME_OFFSET_FIELD)
-		// label may be an empty string; fall back to the field name.
-		.map((i): ResourceMapperField => ({
-			id: i.field,
-			displayName: i.label || i.field,
-			required: !!i.required,
-			defaultMatch: false,
-			display: true,
-			type: 'string',
-		}));
+		.map((i): ResourceMapperField => {
+			// label may be an empty string; fall back to the field name.
+			const field: ResourceMapperField = {
+				id: i.field,
+				displayName: i.label || i.field,
+				required: !!i.required,
+				defaultMatch: false,
+				display: true,
+				type: 'string',
+			};
+			// Inputs the backend returns with allowed values render as a dropdown.
+			const values = i.allowed_values ?? [];
+			if (values.length > 0) {
+				field.type = 'options';
+				field.options = values.map((value) => ({ name: value, value }));
+			}
+			return field;
+		});
 	const offsets = preset.time_offsets ?? [];
 	if (offsets.length > 0) {
 		fields.push({
