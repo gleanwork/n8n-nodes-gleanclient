@@ -1,7 +1,8 @@
 import type {
 	ILoadOptionsFunctions,
-	INodePropertyOptions,
 	INodeListSearchResult,
+	ResourceMapperField,
+	ResourceMapperFields,
 } from 'n8n-workflow';
 import { gleanApiRequest } from './GleanClientTriggerHelpers';
 import {
@@ -93,34 +94,48 @@ async function fetchPreset(ctx: ILoadOptionsFunctions): Promise<Preset | null> {
 	return (response.trigger_preset as Preset) ?? (response as unknown as Preset);
 }
 
-// Required inputs for the selected preset. A schedule offset (time_offset) is surfaced here as a
-// required input, labeled with its allowed second values.
-export async function getRequiredPresetInputs(
+// resourceMapping method: the input fields for the selected preset. Required fields render
+// expanded; optional ones are added via the field dropdown. A schedule offset (time_offset) is
+// surfaced as an options field with humanized allowed values. Refreshes when the preset changes.
+export async function getPresetInputFields(
 	this: ILoadOptionsFunctions,
-): Promise<INodePropertyOptions[]> {
+): Promise<ResourceMapperFields> {
 	const preset = await fetchPreset(this);
-	if (!preset) return [];
-	// label may be an empty string; fall back to the field name.
-	const options = (preset.inputs ?? [])
-		.filter((i) => i.field !== TIME_OFFSET_FIELD && i.required)
-		.map((i) => ({ name: i.label || i.field, value: i.field }));
+	if (!preset) return { fields: [] };
+	const fields: ResourceMapperField[] = (preset.inputs ?? [])
+		.filter((i) => i.field !== TIME_OFFSET_FIELD)
+		// label may be an empty string; fall back to the field name.
+		.map((i): ResourceMapperField => ({
+			id: i.field,
+			displayName: i.label || i.field,
+			required: !!i.required,
+			defaultMatch: false,
+			display: true,
+			type: 'string',
+		}));
 	const offsets = preset.time_offsets ?? [];
 	if (offsets.length > 0) {
-		options.push({
-			name: `Time Before Event (seconds: ${offsets.join(', ')})`,
-			value: TIME_OFFSET_FIELD,
+		fields.push({
+			id: TIME_OFFSET_FIELD,
+			displayName: 'Time Before Event',
+			required: true,
+			defaultMatch: false,
+			display: true,
+			type: 'options',
+			options: offsets.map((seconds) => ({
+				name: humanizeOffset(seconds),
+				value: String(seconds),
+			})),
 		});
 	}
-	return options;
+	return { fields };
 }
 
-// Optional inputs for the selected preset.
-export async function getOptionalPresetInputs(
-	this: ILoadOptionsFunctions,
-): Promise<INodePropertyOptions[]> {
-	const preset = await fetchPreset(this);
-	if (!preset) return [];
-	return (preset.inputs ?? [])
-		.filter((i) => i.field !== TIME_OFFSET_FIELD && !i.required)
-		.map((i) => ({ name: i.label || i.field, value: i.field }));
+function humanizeOffset(seconds: number): string {
+	const minutes = Math.round(seconds / 60);
+	if (minutes % 60 === 0) {
+		const hours = minutes / 60;
+		return `${hours} hour${hours === 1 ? '' : 's'} before`;
+	}
+	return `${minutes} minutes before`;
 }
