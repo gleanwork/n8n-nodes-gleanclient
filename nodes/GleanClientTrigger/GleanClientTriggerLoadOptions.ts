@@ -84,39 +84,43 @@ export async function searchPresets(
 	return { results };
 }
 
-// GET /api/trigger-presets/{preset_id} -> the input fields this preset accepts.
-export async function getPresetInputs(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-	const presetId = presetIdFrom(this.getCurrentNodeParameter('preset'));
-	if (!presetId) return [];
+// GET /trigger-presets/{preset_id} -> the preset (inputs may be null).
+async function fetchPreset(ctx: ILoadOptionsFunctions): Promise<Preset | null> {
+	const presetId = presetIdFrom(ctx.getCurrentNodeParameter('preset'));
+	if (!presetId) return null;
+	const response = await gleanApiRequest.call(ctx, 'GET', presetPath(presetId));
+	// TriggerPresetGetResponse: { trigger_preset: {...}, request_id }.
+	return (response.trigger_preset as Preset) ?? (response as unknown as Preset);
+}
 
-	const response = await gleanApiRequest.call(this, 'GET', presetPath(presetId));
-	// TriggerPresetGetResponse: { trigger_preset: {...}, request_id }. inputs may be null.
-	const preset = (response.trigger_preset as Preset) ?? (response as unknown as Preset);
-	// time_offset is handled by the dedicated "Time Before Event" dropdown, not the generic inputs.
-	const inputs = (preset.inputs ?? []).filter((i) => i.field !== TIME_OFFSET_FIELD && i.required);
+// Required inputs for the selected preset. A schedule offset (time_offset) is surfaced here as a
+// required input, labeled with its allowed second values.
+export async function getRequiredPresetInputs(
+	this: ILoadOptionsFunctions,
+): Promise<INodePropertyOptions[]> {
+	const preset = await fetchPreset(this);
+	if (!preset) return [];
 	// label may be an empty string; fall back to the field name.
-	return inputs.map((i) => ({ name: i.label || i.field, value: i.field }));
-}
-
-// GET /api/trigger-presets/{preset_id} -> allowed schedule offsets as friendly options.
-// Empty for non-schedule presets (they have no time_offsets).
-export async function getTimeOffsets(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-	const presetId = presetIdFrom(this.getCurrentNodeParameter('preset'));
-	if (!presetId) return [];
-
-	const response = await gleanApiRequest.call(this, 'GET', presetPath(presetId));
-	const preset = (response.trigger_preset as Preset) ?? (response as unknown as Preset);
-	return (preset.time_offsets ?? []).map((seconds) => ({
-		name: humanizeOffset(seconds),
-		value: String(seconds),
-	}));
-}
-
-function humanizeOffset(seconds: number): string {
-	const minutes = Math.round(seconds / 60);
-	if (minutes % 60 === 0) {
-		const hours = minutes / 60;
-		return `${hours} hour${hours === 1 ? '' : 's'} before`;
+	const options = (preset.inputs ?? [])
+		.filter((i) => i.field !== TIME_OFFSET_FIELD && i.required)
+		.map((i) => ({ name: i.label || i.field, value: i.field }));
+	const offsets = preset.time_offsets ?? [];
+	if (offsets.length > 0) {
+		options.push({
+			name: `Time Before Event (seconds: ${offsets.join(', ')})`,
+			value: TIME_OFFSET_FIELD,
+		});
 	}
-	return `${minutes} minutes before`;
+	return options;
+}
+
+// Optional inputs for the selected preset.
+export async function getOptionalPresetInputs(
+	this: ILoadOptionsFunctions,
+): Promise<INodePropertyOptions[]> {
+	const preset = await fetchPreset(this);
+	if (!preset) return [];
+	return (preset.inputs ?? [])
+		.filter((i) => i.field !== TIME_OFFSET_FIELD && !i.required)
+		.map((i) => ({ name: i.label || i.field, value: i.field }));
 }

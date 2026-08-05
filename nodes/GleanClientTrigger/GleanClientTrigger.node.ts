@@ -12,7 +12,11 @@ import {
 } from 'n8n-workflow';
 
 import { gleanApiRequest, verifyStandardWebhookSignature, is404 } from './GleanClientTriggerHelpers';
-import { searchPresets, getPresetInputs, getTimeOffsets } from './GleanClientTriggerLoadOptions';
+import {
+	searchPresets,
+	getRequiredPresetInputs,
+	getOptionalPresetInputs,
+} from './GleanClientTriggerLoadOptions';
 import {
 	TRIGGERS_PATH,
 	WEBHOOK_RESPONSES,
@@ -87,29 +91,15 @@ export class GleanClientTrigger implements INodeType {
 				],
 			},
 			{
-				// eslint-disable-next-line n8n-nodes-base/node-param-display-name-wrong-for-dynamic-options
-				displayName: 'Time Before Event',
-				name: 'timeOffset',
-				type: 'options',
-				default: '',
-				// eslint-disable-next-line n8n-nodes-base/node-param-description-wrong-for-dynamic-options
-				description:
-					'For schedule triggers (e.g. before a calendar event), how far ahead to fire. Leave empty for non-schedule triggers.',
-				typeOptions: {
-					loadOptionsMethod: 'getTimeOffsets',
-					loadOptionsDependsOn: ['preset'],
-				},
-			},
-			{
-				displayName: 'Inputs',
-				name: 'inputs',
+				displayName: 'Required Inputs',
+				name: 'requiredInputs',
 				type: 'fixedCollection',
 				typeOptions: {
 					multipleValues: true,
 				},
 				default: {},
-				placeholder: 'Add Input',
-				description: 'Values for the fields this preset accepts',
+				placeholder: 'Add Required Input',
+				description: 'Values for the required fields this trigger needs',
 				options: [
 					{
 						name: 'input',
@@ -123,7 +113,44 @@ export class GleanClientTrigger implements INodeType {
 								description:
 									'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 								typeOptions: {
-									loadOptionsMethod: 'getPresetInputs',
+									loadOptionsMethod: 'getRequiredPresetInputs',
+									loadOptionsDependsOn: ['preset'],
+								},
+							},
+							{
+								displayName: 'Value',
+								name: 'value',
+								type: 'string',
+								default: '',
+							},
+						],
+					},
+				],
+			},
+			{
+				displayName: 'Optional Inputs',
+				name: 'optionalInputs',
+				type: 'fixedCollection',
+				typeOptions: {
+					multipleValues: true,
+				},
+				default: {},
+				placeholder: 'Add Optional Input',
+				description: 'Values for optional fields to further narrow this trigger',
+				options: [
+					{
+						name: 'input',
+						displayName: 'Input',
+						values: [
+							{
+								displayName: 'Field Name or ID',
+								name: 'field',
+								type: 'options',
+								default: '',
+								description:
+									'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+								typeOptions: {
+									loadOptionsMethod: 'getOptionalPresetInputs',
 									loadOptionsDependsOn: ['preset'],
 								},
 							},
@@ -145,8 +172,8 @@ export class GleanClientTrigger implements INodeType {
 			searchPresets,
 		},
 		loadOptions: {
-			getPresetInputs,
-			getTimeOffsets,
+			getRequiredPresetInputs,
+			getOptionalPresetInputs,
 		},
 	};
 
@@ -185,17 +212,15 @@ export class GleanClientTrigger implements INodeType {
 
 				const webhookUrl = this.getNodeWebhookUrl('default');
 				const preset = this.getNodeParameter('preset', undefined, { extractValue: true }) as string;
-				const inputsRaw = this.getNodeParameter('inputs', {}) as {
+				const requiredRaw = this.getNodeParameter('requiredInputs', {}) as {
 					input?: Array<{ field: string; value: string }>;
 				};
-
+				const optionalRaw = this.getNodeParameter('optionalInputs', {}) as {
+					input?: Array<{ field: string; value: string }>;
+				};
 				const inputs: IDataObject = {};
-				for (const i of inputsRaw.input ?? []) {
+				for (const i of [...(requiredRaw.input ?? []), ...(optionalRaw.input ?? [])]) {
 					inputs[i.field] = i.value;
-				}
-				const timeOffset = this.getNodeParameter('timeOffset', '') as string;
-				if (timeOffset) {
-					inputs[TIME_OFFSET_FIELD] = timeOffset;
 				}
 
 				// Fail fast with a clear message if a required input is missing, rather than a backend 400.
@@ -203,10 +228,15 @@ export class GleanClientTrigger implements INodeType {
 				const presetSchema =
 					(presetResp.trigger_preset as {
 						inputs?: Array<{ field: string; label?: string; required?: boolean }>;
+						time_offsets?: number[];
 					}) ?? {};
-				const missing = (presetSchema.inputs ?? [])
-					.filter((i) => i.required && !inputs[i.field])
-					.map((i) => i.label || i.field);
+				const required = (presetSchema.inputs ?? [])
+					.filter((i) => i.required && i.field !== TIME_OFFSET_FIELD)
+					.map((i) => ({ field: i.field, label: i.label || i.field }));
+				if ((presetSchema.time_offsets ?? []).length > 0) {
+					required.push({ field: TIME_OFFSET_FIELD, label: 'Time Before Event' });
+				}
+				const missing = required.filter((r) => !inputs[r.field]).map((r) => r.label);
 				if (missing.length > 0) {
 					throw new NodeOperationError(
 						this.getNode(),
