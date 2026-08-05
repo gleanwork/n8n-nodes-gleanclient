@@ -94,34 +94,40 @@ async function fetchPreset(ctx: ILoadOptionsFunctions): Promise<Preset | null> {
 	return (response.trigger_preset as Preset) ?? (response as unknown as Preset);
 }
 
-// resourceMapping method: the input fields for the selected preset. Required fields render
-// expanded; optional ones are added via the field dropdown. A schedule offset (time_offset) is
-// surfaced as an options field with humanized allowed values. Refreshes when the preset changes.
-export async function getPresetInputFields(
+// Build a resourceMapper field from a preset input; inputs with allowed values render as a dropdown.
+function toMapperField(input: {
+	field: string;
+	label?: string;
+	required?: boolean;
+	allowed_values?: string[];
+}): ResourceMapperField {
+	// label may be an empty string; fall back to the field name.
+	const field: ResourceMapperField = {
+		id: input.field,
+		displayName: input.label || input.field,
+		required: !!input.required,
+		defaultMatch: false,
+		display: true,
+		type: 'string',
+	};
+	const values = input.allowed_values ?? [];
+	if (values.length > 0) {
+		field.type = 'options';
+		field.options = values.map((value) => ({ name: value, value }));
+	}
+	return field;
+}
+
+// resourceMapping method for "Required Inputs": the preset's required inputs (rendered expanded)
+// plus the schedule offset (time_offset) as a humanized dropdown. Refreshes when the preset changes.
+export async function getRequiredPresetInputs(
 	this: ILoadOptionsFunctions,
 ): Promise<ResourceMapperFields> {
 	const preset = await fetchPreset(this);
 	if (!preset) return { fields: [] };
-	const fields: ResourceMapperField[] = (preset.inputs ?? [])
-		.filter((i) => i.field !== TIME_OFFSET_FIELD)
-		.map((i): ResourceMapperField => {
-			// label may be an empty string; fall back to the field name.
-			const field: ResourceMapperField = {
-				id: i.field,
-				displayName: i.label || i.field,
-				required: !!i.required,
-				defaultMatch: false,
-				display: true,
-				type: 'string',
-			};
-			// Inputs the backend returns with allowed values render as a dropdown.
-			const values = i.allowed_values ?? [];
-			if (values.length > 0) {
-				field.type = 'options';
-				field.options = values.map((value) => ({ name: value, value }));
-			}
-			return field;
-		});
+	const fields = (preset.inputs ?? [])
+		.filter((i) => i.field !== TIME_OFFSET_FIELD && i.required)
+		.map(toMapperField);
 	const offsets = preset.time_offsets ?? [];
 	if (offsets.length > 0) {
 		fields.push({
@@ -138,6 +144,19 @@ export async function getPresetInputFields(
 		});
 	}
 	return { fields };
+}
+
+// resourceMapping method for "Optional Inputs": the preset's optional inputs, added on demand.
+export async function getOptionalPresetInputs(
+	this: ILoadOptionsFunctions,
+): Promise<ResourceMapperFields> {
+	const preset = await fetchPreset(this);
+	if (!preset) return { fields: [] };
+	return {
+		fields: (preset.inputs ?? [])
+			.filter((i) => i.field !== TIME_OFFSET_FIELD && !i.required)
+			.map(toMapperField),
+	};
 }
 
 function humanizeOffset(seconds: number): string {
