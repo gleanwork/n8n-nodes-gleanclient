@@ -18,13 +18,7 @@ import {
 	getOptionalInputFields,
 	getOptionalInputValues,
 } from './GleanClientTriggerLoadOptions';
-import {
-	TRIGGERS_PATH,
-	WEBHOOK_RESPONSES,
-	triggerPath,
-	presetPath,
-	TIME_OFFSET_FIELD,
-} from './constants';
+import { TRIGGERS_PATH, WEBHOOK_RESPONSES, triggerPath, presetPath } from './constants';
 
 export class GleanClientTrigger implements INodeType {
 	description: INodeTypeDescription = {
@@ -224,14 +218,10 @@ export class GleanClientTrigger implements INodeType {
 				const presetSchema =
 					(presetResp.trigger_preset as {
 						inputs?: Array<{ field: string; label?: string; required?: boolean }>;
-						time_offsets?: number[];
 					}) ?? {};
 				const required = (presetSchema.inputs ?? [])
-					.filter((i) => i.required && i.field !== TIME_OFFSET_FIELD)
+					.filter((i) => i.required)
 					.map((i) => ({ field: i.field, label: i.label || i.field }));
-				if ((presetSchema.time_offsets ?? []).length > 0) {
-					required.push({ field: TIME_OFFSET_FIELD, label: 'Time Before Event' });
-				}
 				const missing = required.filter((r) => !inputs[r.field]).map((r) => r.label);
 				if (missing.length > 0) {
 					throw new NodeOperationError(

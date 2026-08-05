@@ -6,13 +6,7 @@ import type {
 	ResourceMapperFields,
 } from 'n8n-workflow';
 import { gleanApiRequest } from './GleanClientTriggerHelpers';
-import {
-	MAX_PRESET_PAGES,
-	PRESET_PAGE_SIZE,
-	TIME_OFFSET_FIELD,
-	TRIGGER_PRESETS_PATH,
-	presetPath,
-} from './constants';
+import { MAX_PRESET_PAGES, PRESET_PAGE_SIZE, TRIGGER_PRESETS_PATH, presetPath } from './constants';
 
 interface AllowedValue {
 	value: string;
@@ -30,7 +24,6 @@ interface Preset {
 		required?: boolean;
 		allowed_values?: AllowedValue[];
 	}>;
-	time_offsets?: AllowedValue[];
 }
 
 // TODO: these datasource labels should come from the backend, not be hardcoded here.
@@ -129,29 +122,14 @@ function toMapperField(input: {
 	return field;
 }
 
-// resourceMapping method for "Required Inputs": the preset's required inputs (rendered expanded)
-// plus the schedule offset (time_offset) as a humanized dropdown. Refreshes when the preset changes.
+// resourceMapping method for "Required Inputs": the preset's required inputs, rendered expanded.
+// The schedule offset (time_offset) is just another required picklist input. Refreshes on preset change.
 export async function getRequiredPresetInputs(
 	this: ILoadOptionsFunctions,
 ): Promise<ResourceMapperFields> {
 	const preset = await fetchPreset(this);
 	if (!preset) return { fields: [] };
-	const fields = (preset.inputs ?? [])
-		.filter((i) => i.field !== TIME_OFFSET_FIELD && i.required)
-		.map(toMapperField);
-	const offsets = preset.time_offsets ?? [];
-	if (offsets.length > 0) {
-		fields.push({
-			id: TIME_OFFSET_FIELD,
-			displayName: 'Time Before Event',
-			required: true,
-			defaultMatch: false,
-			display: true,
-			type: 'options',
-			options: offsets.map((o) => ({ name: o.display_label || o.value, value: o.value })),
-		});
-	}
-	return { fields };
+	return { fields: (preset.inputs ?? []).filter((i) => i.required).map(toMapperField) };
 }
 
 // loadOptions for the "Optional Inputs" field dropdown: the preset's optional input field names.
@@ -161,7 +139,7 @@ export async function getOptionalInputFields(
 	const preset = await fetchPreset(this);
 	if (!preset) return [];
 	return (preset.inputs ?? [])
-		.filter((i) => i.field !== TIME_OFFSET_FIELD && !i.required)
+		.filter((i) => !i.required)
 		.map((i) => ({ name: i.label || i.field, value: i.field }));
 }
 

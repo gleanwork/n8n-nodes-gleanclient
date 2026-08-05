@@ -5,9 +5,6 @@ export const CREDENTIAL_API_KEY = 'gleanTriggerApi';
 export const TRIGGERS_PATH = '/triggers';
 export const TRIGGER_PRESETS_PATH = '/trigger-presets';
 
-// Input key for the schedule offset (seconds); matches scio's time_offset input.
-export const TIME_OFFSET_FIELD = 'time_offset';
-
 export const triggerPath = (triggerId: string): string => `${TRIGGERS_PATH}/${triggerId}`;
 export const presetPath = (presetId: string): string => `${TRIGGER_PRESETS_PATH}/${presetId}`;
 
