@@ -29,7 +29,7 @@ export class GleanClientTrigger implements INodeType {
 		group: ['trigger'],
 		version: 1,
 		usableAsTool: true,
-		subtitle: '={{$parameter["preset"]["cachedResultName"] || $parameter["preset"]["value"] || $parameter["preset"]}}',
+		subtitle: '={{$parameter["preset"]["value"] || $parameter["preset"]}}',
 		description: 'Starts the workflow when a Glean content trigger fires',
 		defaults: {
 			name: 'Glean Trigger',
@@ -87,12 +87,14 @@ export class GleanClientTrigger implements INodeType {
 				],
 			},
 			{
-				displayName: 'Time Before Event Name or ID',
+				// eslint-disable-next-line n8n-nodes-base/node-param-display-name-wrong-for-dynamic-options
+				displayName: 'Time Before Event',
 				name: 'timeOffset',
 				type: 'options',
 				default: '',
+				// eslint-disable-next-line n8n-nodes-base/node-param-description-wrong-for-dynamic-options
 				description:
-					'For schedule triggers (e.g. before a calendar event), how far ahead to fire. Leave empty for non-schedule triggers. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+					'For schedule triggers (e.g. before a calendar event), how far ahead to fire. Leave empty for non-schedule triggers.',
 				typeOptions: {
 					loadOptionsMethod: 'getTimeOffsets',
 					loadOptionsDependsOn: ['preset'],

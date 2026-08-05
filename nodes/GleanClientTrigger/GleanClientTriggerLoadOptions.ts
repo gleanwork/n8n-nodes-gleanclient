@@ -21,6 +21,7 @@ interface Preset {
 	time_offsets?: number[];
 }
 
+// TODO: these datasource labels should come from the backend, not be hardcoded here.
 // Friendly datasource labels so the picker reads well and groups by source.
 const DATASOURCE_LABELS: Record<string, string> = {
 	artifacts: 'Artifacts',
@@ -37,7 +38,8 @@ const DATASOURCE_LABELS: Record<string, string> = {
 	o365sharepoint: 'SharePoint',
 	outlook: 'Outlook',
 	outlookcalendar: 'Outlook Calendar',
-	salescloud: 'Salesforce',
+	salescloud: 'Sales Cloud',
+	servicecloud: 'Service Cloud',
 	slack: 'Slack',
 	zendesk: 'Zendesk',
 	zoom: 'Zoom',
@@ -91,12 +93,9 @@ export async function getPresetInputs(this: ILoadOptionsFunctions): Promise<INod
 	// TriggerPresetGetResponse: { trigger_preset: {...}, request_id }. inputs may be null.
 	const preset = (response.trigger_preset as Preset) ?? (response as unknown as Preset);
 	// time_offset is handled by the dedicated "Time Before Event" dropdown, not the generic inputs.
-	const inputs = (preset.inputs ?? []).filter((i) => i.field !== TIME_OFFSET_FIELD);
-	return inputs.map((i) => {
-		// label may be an empty string; fall back to the field name.
-		const label = i.label || i.field;
-		return { name: i.required ? `${label} (required)` : label, value: i.field };
-	});
+	const inputs = (preset.inputs ?? []).filter((i) => i.field !== TIME_OFFSET_FIELD && i.required);
+	// label may be an empty string; fall back to the field name.
+	return inputs.map((i) => ({ name: i.label || i.field, value: i.field }));
 }
 
 // GET /api/trigger-presets/{preset_id} -> allowed schedule offsets as friendly options.
