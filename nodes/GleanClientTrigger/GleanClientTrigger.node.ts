@@ -15,7 +15,8 @@ import { gleanApiRequest, verifyStandardWebhookSignature, is404 } from './GleanC
 import {
 	searchPresets,
 	getRequiredPresetInputs,
-	getOptionalPresetInputs,
+	getOptionalInputFields,
+	getOptionalInputValues,
 } from './GleanClientTriggerLoadOptions';
 import {
 	TRIGGERS_PATH,
@@ -92,6 +93,12 @@ export class GleanClientTrigger implements INodeType {
 			},
 			{
 				displayName: 'Required Inputs',
+				name: 'requiredInputsNotice',
+				type: 'notice',
+				default: '',
+			},
+			{
+				displayName: 'Required Inputs',
 				name: 'requiredInputs',
 				type: 'resourceMapper',
 				default: {
@@ -119,26 +126,43 @@ export class GleanClientTrigger implements INodeType {
 			{
 				displayName: 'Optional Inputs',
 				name: 'optionalInputs',
-				type: 'resourceMapper',
-				default: {
-					mappingMode: 'defineBelow',
-					value: null,
-				},
-				noDataExpression: true,
+				type: 'fixedCollection',
 				typeOptions: {
-					loadOptionsDependsOn: ['preset.value'],
-					resourceMapper: {
-						resourceMapperMethod: 'getOptionalPresetInputs',
-						mode: 'add',
-						fieldWords: {
-							singular: 'optional input',
-							plural: 'optional inputs',
-						},
-						// Optional inputs start empty; add them via the field dropdown.
-						addAllFields: false,
-						supportAutoMap: false,
-					},
+					multipleValues: true,
 				},
+				default: {},
+				placeholder: 'Add Optional Input',
+				description: 'Optional fields to further narrow this trigger',
+				options: [
+					{
+						name: 'input',
+						displayName: 'Input',
+						values: [
+							{
+								displayName: 'Field Name or ID',
+								name: 'field',
+								type: 'options',
+								default: '',
+								description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+								typeOptions: {
+									loadOptionsMethod: 'getOptionalInputFields',
+									loadOptionsDependsOn: ['preset.value'],
+								},
+							},
+							{
+								displayName: 'Value Name or ID',
+								name: 'value',
+								type: 'options',
+								default: '',
+								description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+								typeOptions: {
+									loadOptionsMethod: 'getOptionalInputValues',
+									loadOptionsDependsOn: ['&field'],
+								},
+							},
+						],
+					},
+				],
 			},
 		],
 	};
@@ -149,7 +173,10 @@ export class GleanClientTrigger implements INodeType {
 		},
 		resourceMapping: {
 			getRequiredPresetInputs,
-			getOptionalPresetInputs,
+		},
+		loadOptions: {
+			getOptionalInputFields,
+			getOptionalInputValues,
 		},
 	};
 
@@ -190,8 +217,13 @@ export class GleanClientTrigger implements INodeType {
 				const preset = this.getNodeParameter('preset', undefined, { extractValue: true }) as string;
 				// resourceMapper stores mapped values under `.value`, keyed by field id.
 				const requiredMapped = this.getNodeParameter('requiredInputs', {}) as { value?: IDataObject };
-				const optionalMapped = this.getNodeParameter('optionalInputs', {}) as { value?: IDataObject };
-				const inputs: IDataObject = { ...(requiredMapped.value ?? {}), ...(optionalMapped.value ?? {}) };
+				const optionalRaw = this.getNodeParameter('optionalInputs', {}) as {
+					input?: Array<{ field: string; value: string }>;
+				};
+				const inputs: IDataObject = { ...(requiredMapped.value ?? {}) };
+				for (const i of optionalRaw.input ?? []) {
+					inputs[i.field] = i.value;
+				}
 
 				// Fail fast with a clear message if a required input is missing, rather than a backend 400.
 				const presetResp = await gleanApiRequest.call(this, 'GET', presetPath(preset));

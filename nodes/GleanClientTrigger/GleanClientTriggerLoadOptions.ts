@@ -1,6 +1,7 @@
 import type {
 	ILoadOptionsFunctions,
 	INodeListSearchResult,
+	INodePropertyOptions,
 	ResourceMapperField,
 	ResourceMapperFields,
 } from 'n8n-workflow';
@@ -146,17 +147,26 @@ export async function getRequiredPresetInputs(
 	return { fields };
 }
 
-// resourceMapping method for "Optional Inputs": the preset's optional inputs, added on demand.
-export async function getOptionalPresetInputs(
+// loadOptions for the "Optional Inputs" field dropdown: the preset's optional input field names.
+export async function getOptionalInputFields(
 	this: ILoadOptionsFunctions,
-): Promise<ResourceMapperFields> {
+): Promise<INodePropertyOptions[]> {
 	const preset = await fetchPreset(this);
-	if (!preset) return { fields: [] };
-	return {
-		fields: (preset.inputs ?? [])
-			.filter((i) => i.field !== TIME_OFFSET_FIELD && !i.required)
-			.map(toMapperField),
-	};
+	if (!preset) return [];
+	return (preset.inputs ?? [])
+		.filter((i) => i.field !== TIME_OFFSET_FIELD && !i.required)
+		.map((i) => ({ name: i.label || i.field, value: i.field }));
+}
+
+// loadOptions for an optional input's value dropdown: the chosen field's allowed values.
+export async function getOptionalInputValues(
+	this: ILoadOptionsFunctions,
+): Promise<INodePropertyOptions[]> {
+	const field = String(this.getCurrentNodeParameter('&field') ?? '');
+	if (!field) return [];
+	const preset = await fetchPreset(this);
+	const input = (preset?.inputs ?? []).find((i) => i.field === field);
+	return (input?.allowed_values ?? []).map((value) => ({ name: value, value }));
 }
 
 function humanizeOffset(seconds: number): string {
