@@ -87,7 +87,7 @@ export class GleanClientTrigger implements INodeType {
 				],
 			},
 			{
-				displayName: 'Inputs',
+				displayName: 'Required Inputs',
 				name: 'inputs',
 				type: 'resourceMapper',
 				default: {
