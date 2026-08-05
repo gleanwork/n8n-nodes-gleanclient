@@ -14,13 +14,23 @@ import {
 	presetPath,
 } from './constants';
 
+interface AllowedValue {
+	value: string;
+	display_label?: string;
+}
+
 interface Preset {
 	preset_id: string;
 	datasource?: string;
 	display_name?: string;
 	description?: string;
-	inputs?: Array<{ field: string; label?: string; required?: boolean; allowed_values?: string[] }>;
-	time_offsets?: number[];
+	inputs?: Array<{
+		field: string;
+		label?: string;
+		required?: boolean;
+		allowed_values?: AllowedValue[];
+	}>;
+	time_offsets?: AllowedValue[];
 }
 
 // TODO: these datasource labels should come from the backend, not be hardcoded here.
@@ -100,7 +110,7 @@ function toMapperField(input: {
 	field: string;
 	label?: string;
 	required?: boolean;
-	allowed_values?: string[];
+	allowed_values?: AllowedValue[];
 }): ResourceMapperField {
 	// label may be an empty string; fall back to the field name.
 	const field: ResourceMapperField = {
@@ -114,7 +124,7 @@ function toMapperField(input: {
 	const values = input.allowed_values ?? [];
 	if (values.length > 0) {
 		field.type = 'options';
-		field.options = values.map((value) => ({ name: value, value }));
+		field.options = values.map((v) => ({ name: v.display_label || v.value, value: v.value }));
 	}
 	return field;
 }
@@ -138,10 +148,7 @@ export async function getRequiredPresetInputs(
 			defaultMatch: false,
 			display: true,
 			type: 'options',
-			options: offsets.map((seconds) => ({
-				name: humanizeOffset(seconds),
-				value: String(seconds),
-			})),
+			options: offsets.map((o) => ({ name: o.display_label || o.value, value: o.value })),
 		});
 	}
 	return { fields };
@@ -166,14 +173,5 @@ export async function getOptionalInputValues(
 	if (!field) return [];
 	const preset = await fetchPreset(this);
 	const input = (preset?.inputs ?? []).find((i) => i.field === field);
-	return (input?.allowed_values ?? []).map((value) => ({ name: value, value }));
-}
-
-function humanizeOffset(seconds: number): string {
-	const minutes = Math.round(seconds / 60);
-	if (minutes % 60 === 0) {
-		const hours = minutes / 60;
-		return `${hours} hour${hours === 1 ? '' : 's'} before`;
-	}
-	return `${minutes} minutes before`;
+	return (input?.allowed_values ?? []).map((v) => ({ name: v.display_label || v.value, value: v.value }));
 }
