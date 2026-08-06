@@ -108,6 +108,9 @@ export class GleanClientTrigger implements INodeType {
 						// All required inputs render expanded.
 						addAllFields: true,
 						supportAutoMap: false,
+						// A preset can legitimately have nothing here — either no required inputs, or its
+						// required input has too many values to list and lives under Additional Inputs.
+						hideNoDataError: true,
 					},
 				},
 			},
@@ -144,6 +147,11 @@ export class GleanClientTrigger implements INodeType {
 								type: 'resourceLocator',
 								default: { mode: 'list', value: '' },
 								description: 'The value to match on. Search the list, or enter a value directly.',
+								// Re-query when the sibling field changes, so the value list isn't served from
+								// the cache populated before a field was picked.
+								typeOptions: {
+									loadOptionsDependsOn: ['&field', 'preset.value'],
+								},
 								modes: [
 									{
 										displayName: 'From List',
