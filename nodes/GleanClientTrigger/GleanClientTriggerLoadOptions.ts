@@ -7,6 +7,7 @@ import type {
 } from 'n8n-workflow';
 import { gleanApiRequest } from './GleanClientTriggerHelpers';
 import {
+	MAX_INLINE_VALUES,
 	MAX_PRESET_PAGES,
 	PRESET_PAGE_SIZE,
 	TRIGGER_PRESETS_PATH,
@@ -140,11 +141,12 @@ function toMapperField(input: PresetInput): ResourceMapperField {
 	return field;
 }
 
-// A truncated value set can't be a resourceMapper dropdown: ResourceMapperField only carries a
-// static options array, so the values past the bounded set would be unreachable. Those inputs move
-// to the searchable collection instead.
+// ResourceMapperField only carries a static options array, so an input whose values can't be
+// listed in full has to go to the searchable collection instead. is_truncated alone isn't enough
+// to detect that: a Slack channel facet reports 301 values as untruncated while the search endpoint
+// reports the same field as truncated, so also treat any oversized list as unlistable.
 function isMappable(input: PresetInput): boolean {
-	return !input.is_truncated;
+	return !input.is_truncated && (input.values?.length ?? 0) <= MAX_INLINE_VALUES;
 }
 
 // resourceMapping method for "Required Inputs": the preset's required inputs, rendered expanded.
