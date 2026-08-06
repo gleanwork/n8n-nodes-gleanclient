@@ -217,11 +217,11 @@ export class GleanClientTrigger implements INodeType {
 				const presetResp = await gleanApiRequest.call(this, 'GET', presetPath(preset));
 				const presetSchema =
 					(presetResp.trigger_preset as {
-						inputs?: Array<{ field: string; label?: string; required?: boolean }>;
+						inputs?: Array<{ field: string; display_name?: string; is_required?: boolean }>;
 					}) ?? {};
 				const required = (presetSchema.inputs ?? [])
-					.filter((i) => i.required)
-					.map((i) => ({ field: i.field, label: i.label || i.field }));
+					.filter((i) => i.is_required)
+					.map((i) => ({ field: i.field, label: i.display_name || i.field }));
 				const missing = required.filter((r) => !inputs[r.field]).map((r) => r.label);
 				if (missing.length > 0) {
 					throw new NodeOperationError(

@@ -8,9 +8,19 @@ import type {
 import { gleanApiRequest } from './GleanClientTriggerHelpers';
 import { MAX_PRESET_PAGES, PRESET_PAGE_SIZE, TRIGGER_PRESETS_PATH, presetPath } from './constants';
 
-interface AllowedValue {
+interface InputValue {
 	value: string;
-	display_label?: string;
+	display_name: string;
+}
+
+interface PresetInput {
+	field: string;
+	type: string;
+	display_name: string;
+	is_required: boolean;
+	// Absent for free-text inputs. Bounded: is_truncated means more values exist than are listed.
+	values?: InputValue[];
+	is_truncated?: boolean;
 }
 
 interface Preset {
@@ -18,12 +28,7 @@ interface Preset {
 	datasource?: string;
 	display_name?: string;
 	description?: string;
-	inputs?: Array<{
-		field: string;
-		label?: string;
-		required?: boolean;
-		allowed_values?: AllowedValue[];
-	}>;
+	inputs?: PresetInput[];
 }
 
 // TODO: these datasource labels should come from the backend, not be hardcoded here.
@@ -98,26 +103,33 @@ async function fetchPreset(ctx: ILoadOptionsFunctions): Promise<Preset | null> {
 	return (response.trigger_preset as Preset) ?? (response as unknown as Preset);
 }
 
-// Build a resourceMapper field from a preset input; inputs with allowed values render as a dropdown.
-function toMapperField(input: {
-	field: string;
-	label?: string;
-	required?: boolean;
-	allowed_values?: AllowedValue[];
-}): ResourceMapperField {
-	// label may be an empty string; fall back to the field name.
+// The API sends the bare label, so compose "Name (value)" here to keep same-named choices
+// (two people called Jane Doe) distinguishable by their unique value.
+function valueLabel(v: InputValue): string {
+	return v.display_name && v.display_name !== v.value
+		? `${v.display_name} (${v.value})`
+		: v.value;
+}
+
+function toValueOptions(values: InputValue[]): INodePropertyOptions[] {
+	return values.map((v) => ({ name: valueLabel(v), value: v.value }));
+}
+
+// Build a resourceMapper field from a preset input; inputs with values render as a dropdown.
+function toMapperField(input: PresetInput): ResourceMapperField {
+	// display_name may be an empty string; fall back to the field name.
 	const field: ResourceMapperField = {
 		id: input.field,
-		displayName: input.label || input.field,
-		required: !!input.required,
+		displayName: input.display_name || input.field,
+		required: input.is_required,
 		defaultMatch: false,
 		display: true,
 		type: 'string',
 	};
-	const values = input.allowed_values ?? [];
+	const values = input.values ?? [];
 	if (values.length > 0) {
 		field.type = 'options';
-		field.options = values.map((v) => ({ name: v.display_label || v.value, value: v.value }));
+		field.options = toValueOptions(values);
 	}
 	return field;
 }
@@ -129,7 +141,7 @@ export async function getRequiredPresetInputs(
 ): Promise<ResourceMapperFields> {
 	const preset = await fetchPreset(this);
 	if (!preset) return { fields: [] };
-	return { fields: (preset.inputs ?? []).filter((i) => i.required).map(toMapperField) };
+	return { fields: (preset.inputs ?? []).filter((i) => i.is_required).map(toMapperField) };
 }
 
 // loadOptions for the "Optional Inputs" field dropdown: the preset's optional input field names.
@@ -139,11 +151,11 @@ export async function getOptionalInputFields(
 	const preset = await fetchPreset(this);
 	if (!preset) return [];
 	return (preset.inputs ?? [])
-		.filter((i) => !i.required)
-		.map((i) => ({ name: i.label || i.field, value: i.field }));
+		.filter((i) => !i.is_required)
+		.map((i) => ({ name: i.display_name || i.field, value: i.field }));
 }
 
-// loadOptions for an optional input's value dropdown: the chosen field's allowed values.
+// loadOptions for an optional input's value dropdown: the chosen field's values.
 export async function getOptionalInputValues(
 	this: ILoadOptionsFunctions,
 ): Promise<INodePropertyOptions[]> {
@@ -151,5 +163,5 @@ export async function getOptionalInputValues(
 	if (!field) return [];
 	const preset = await fetchPreset(this);
 	const input = (preset?.inputs ?? []).find((i) => i.field === field);
-	return (input?.allowed_values ?? []).map((v) => ({ name: v.display_label || v.value, value: v.value }));
+	return toValueOptions(input?.values ?? []);
 }
