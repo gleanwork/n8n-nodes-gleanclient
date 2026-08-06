@@ -5,6 +5,7 @@ import {
 	type INodeTypeDescription,
 	type IWebhookResponseData,
 	type IDataObject,
+	type INodePropertyCollection,
 	type JsonObject,
 	NodeConnectionTypes,
 	NodeApiError,
@@ -14,11 +15,62 @@ import {
 import { gleanApiRequest, verifyStandardWebhookSignature, is404 } from './GleanClientTriggerHelpers';
 import {
 	searchPresets,
-	getRequiredPresetInputs,
+	getRequiredInputFields,
 	getOptionalInputFields,
 	searchInputValues,
 } from './GleanClientTriggerLoadOptions';
 import { TRIGGERS_PATH, WEBHOOK_RESPONSES, triggerPath, presetPath } from './constants';
+
+// Both collections render the same row — pick a field, then search its values. Only the field list
+// differs (required vs optional), so that is the single parameter.
+function inputRow(fieldsMethod: string): INodePropertyCollection {
+	return {
+		name: 'input',
+		displayName: 'Input',
+		values: [
+			{
+				displayName: 'Field Name or ID',
+				name: 'field',
+				type: 'options',
+				default: '',
+				description:
+					'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+				typeOptions: {
+					loadOptionsMethod: fieldsMethod,
+					loadOptionsDependsOn: ['preset.value'],
+				},
+			},
+			{
+				displayName: 'Value',
+				name: 'value',
+				type: 'resourceLocator',
+				default: { mode: 'list', value: '' },
+				description: 'The value to match on. Search the list, or enter a value directly.',
+				// Re-query when the sibling field changes, so the value list isn't served from the
+				// cache populated before a field was picked.
+				typeOptions: {
+					loadOptionsDependsOn: ['&field', 'preset.value'],
+				},
+				modes: [
+					{
+						displayName: 'From List',
+						name: 'list',
+						type: 'list',
+						typeOptions: {
+							searchListMethod: 'searchInputValues',
+							searchable: true,
+						},
+					},
+					{
+						displayName: 'By Value',
+						name: 'value',
+						type: 'string',
+					},
+				],
+			},
+		],
+	};
+}
 
 export class GleanClientTrigger implements INodeType {
 	description: INodeTypeDescription = {
@@ -88,90 +140,27 @@ export class GleanClientTrigger implements INodeType {
 			{
 				displayName: 'Required Inputs',
 				name: 'requiredInputs',
-				type: 'resourceMapper',
-				default: {
-					mappingMode: 'defineBelow',
-					value: null,
-				},
-				required: true,
-				noDataExpression: true,
+				type: 'fixedCollection',
 				typeOptions: {
-					// Refresh the field list whenever the selected preset changes.
-					loadOptionsDependsOn: ['preset.value'],
-					resourceMapper: {
-						resourceMapperMethod: 'getRequiredPresetInputs',
-						mode: 'add',
-						fieldWords: {
-							singular: 'required input',
-							plural: 'required inputs',
-						},
-						// All required inputs render expanded.
-						addAllFields: true,
-						supportAutoMap: false,
-						// A preset can legitimately have nothing here — either no required inputs, or its
-						// required input has too many values to list and lives under Additional Inputs.
-						hideNoDataError: true,
-					},
+					multipleValues: true,
 				},
+				default: {},
+				placeholder: 'Add Required Input',
+				description:
+					'Inputs this preset requires. The trigger cannot be created until every one is set.',
+				options: [inputRow('getRequiredInputFields')],
 			},
 			{
-				displayName: 'Additional Inputs',
+				displayName: 'Optional Inputs',
 				name: 'optionalInputs',
 				type: 'fixedCollection',
 				typeOptions: {
 					multipleValues: true,
 				},
 				default: {},
-				placeholder: 'Add Input',
-				description:
-					'Fields to further narrow this trigger. Inputs with too many values to list (e.g. a Slack channel) are set here so they can be searched, and are marked "(required)" when the preset requires them.',
-				options: [
-					{
-						name: 'input',
-						displayName: 'Input',
-						values: [
-							{
-								displayName: 'Field Name or ID',
-								name: 'field',
-								type: 'options',
-								default: '',
-								description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-								typeOptions: {
-									loadOptionsMethod: 'getOptionalInputFields',
-									loadOptionsDependsOn: ['preset.value'],
-								},
-							},
-							{
-								displayName: 'Value',
-								name: 'value',
-								type: 'resourceLocator',
-								default: { mode: 'list', value: '' },
-								description: 'The value to match on. Search the list, or enter a value directly.',
-								// Re-query when the sibling field changes, so the value list isn't served from
-								// the cache populated before a field was picked.
-								typeOptions: {
-									loadOptionsDependsOn: ['&field', 'preset.value'],
-								},
-								modes: [
-									{
-										displayName: 'From List',
-										name: 'list',
-										type: 'list',
-										typeOptions: {
-											searchListMethod: 'searchInputValues',
-											searchable: true,
-										},
-									},
-									{
-										displayName: 'By Value',
-										name: 'value',
-										type: 'string',
-									},
-								],
-							},
-						],
-					},
-				],
+				placeholder: 'Add Optional Input',
+				description: 'Optional fields to further narrow this trigger',
+				options: [inputRow('getOptionalInputFields')],
 			},
 		],
 	};
@@ -181,10 +170,8 @@ export class GleanClientTrigger implements INodeType {
 			searchPresets,
 			searchInputValues,
 		},
-		resourceMapping: {
-			getRequiredPresetInputs,
-		},
 		loadOptions: {
+			getRequiredInputFields,
 			getOptionalInputFields,
 		},
 	};
@@ -224,15 +211,16 @@ export class GleanClientTrigger implements INodeType {
 
 				const webhookUrl = this.getNodeWebhookUrl('default');
 				const preset = this.getNodeParameter('preset', undefined, { extractValue: true }) as string;
-				// resourceMapper stores mapped values under `.value`, keyed by field id.
-				const requiredMapped = this.getNodeParameter('requiredInputs', {}) as { value?: IDataObject };
-				const optionalRaw = this.getNodeParameter('optionalInputs', {}) as {
-					input?: Array<{ field: string; value: string | { value?: string } }>;
-				};
-				const inputs: IDataObject = { ...(requiredMapped.value ?? {}) };
-				for (const i of optionalRaw.input ?? []) {
-					// resourceLocator values arrive as { __rl, mode, value }; plain modes as a string.
-					inputs[i.field] = typeof i.value === 'object' ? (i.value?.value ?? '') : i.value;
+				const inputs: IDataObject = {};
+				for (const name of ['requiredInputs', 'optionalInputs']) {
+					const rows = this.getNodeParameter(name, {}) as {
+						input?: Array<{ field: string; value: string | { value?: string } }>;
+					};
+					for (const i of rows.input ?? []) {
+						if (!i.field) continue;
+						// resourceLocator values arrive as { __rl, mode, value }; plain modes as a string.
+						inputs[i.field] = typeof i.value === 'object' ? (i.value?.value ?? '') : i.value;
+					}
 				}
 
 				// Fail fast with a clear message if a required input is missing, rather than a backend 400.

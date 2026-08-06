@@ -11,8 +11,6 @@ export const presetInputValuesPath = (presetId: string): string =>
 	`${presetPath(presetId)}/input-values`;
 
 export const PRESET_PAGE_SIZE = 100;
-// Above this, a static dropdown stops being usable and the input goes to the searchable widget.
-export const MAX_INLINE_VALUES = 25;
 // Safety cap against a misbehaving has_more.
 export const MAX_PRESET_PAGES = 50;
 

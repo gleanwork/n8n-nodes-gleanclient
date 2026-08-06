@@ -2,12 +2,9 @@ import type {
 	ILoadOptionsFunctions,
 	INodeListSearchResult,
 	INodePropertyOptions,
-	ResourceMapperField,
-	ResourceMapperFields,
 } from 'n8n-workflow';
 import { gleanApiRequest } from './GleanClientTriggerHelpers';
 import {
-	MAX_INLINE_VALUES,
 	MAX_PRESET_PAGES,
 	PRESET_PAGE_SIZE,
 	TRIGGER_PRESETS_PATH,
@@ -25,7 +22,7 @@ interface PresetInput {
 	type: string;
 	display_name: string;
 	is_required: boolean;
-	// Absent for free-text inputs. Bounded: is_truncated means more values exist than are listed.
+	// Absent for free-text inputs; bounded when present, so values are picked via search.
 	values?: InputValue[];
 	is_truncated?: boolean;
 }
@@ -110,71 +107,36 @@ async function fetchPreset(ctx: ILoadOptionsFunctions): Promise<Preset | null> {
 	return (response.trigger_preset as Preset) ?? (response as unknown as Preset);
 }
 
-// The API sends the bare label, so compose "Name (value)" here to keep same-named choices
-// (two people called Jane Doe) distinguishable by their unique value.
-function valueLabel(v: InputValue): string {
-	return v.display_name && v.display_name !== v.value
-		? `${v.display_name} (${v.value})`
-		: v.value;
-}
-
 function toValueOptions(values: InputValue[]): INodePropertyOptions[] {
-	return values.map((v) => ({ name: valueLabel(v), value: v.value }));
+	// The API sends the bare label, so compose "Name (value)" here to keep same-named choices
+	// (two people called Jane Doe) distinguishable by their unique value.
+	return values.map((v) => ({
+		name: v.display_name && v.display_name !== v.value ? `${v.display_name} (${v.value})` : v.value,
+		value: v.value,
+	}));
 }
 
-// Build a resourceMapper field from a preset input; inputs with values render as a dropdown.
-function toMapperField(input: PresetInput): ResourceMapperField {
-	// display_name may be an empty string; fall back to the field name.
-	const field: ResourceMapperField = {
-		id: input.field,
-		displayName: input.display_name || input.field,
-		required: input.is_required,
-		defaultMatch: false,
-		display: true,
-		type: 'string',
-	};
-	const values = input.values ?? [];
-	if (values.length > 0) {
-		field.type = 'options';
-		field.options = toValueOptions(values);
-	}
-	return field;
+function inputFields(
+	preset: Preset | null, /*const*/
+	required: boolean,
+): INodePropertyOptions[] {
+	return (preset?.inputs ?? [])
+		.filter((i) => i.is_required === required)
+		.map((i) => ({ name: i.display_name || i.field, value: i.field }));
 }
 
-// ResourceMapperField only carries a static options array, so an input whose values can't be
-// listed in full has to go to the searchable collection instead. is_truncated alone isn't enough
-// to detect that: a Slack channel facet reports 301 values as untruncated while the search endpoint
-// reports the same field as truncated, so also treat any oversized list as unlistable.
-function isMappable(input: PresetInput): boolean {
-	return !input.is_truncated && (input.values?.length ?? 0) <= MAX_INLINE_VALUES;
-}
-
-// resourceMapping method for "Required Inputs": the preset's required inputs, rendered expanded.
-// The schedule offset (time_offset) is just another required picklist input. Refreshes on preset change.
-export async function getRequiredPresetInputs(
+// loadOptions for the two input collections' field dropdowns. Every value is picked through the
+// searchable value locator, so neither list depends on how many values an input has.
+export async function getRequiredInputFields(
 	this: ILoadOptionsFunctions,
-): Promise<ResourceMapperFields> {
-	const preset = await fetchPreset(this);
-	if (!preset) return { fields: [] };
-	return {
-		fields: (preset.inputs ?? [])
-			.filter((i) => i.is_required && isMappable(i))
-			.map(toMapperField),
-	};
+): Promise<INodePropertyOptions[]> {
+	return inputFields(await fetchPreset(this), true /*required*/);
 }
 
-// loadOptions for the "Optional Inputs" field dropdown: the preset's optional input field names.
 export async function getOptionalInputFields(
 	this: ILoadOptionsFunctions,
 ): Promise<INodePropertyOptions[]> {
-	const preset = await fetchPreset(this);
-	if (!preset) return [];
-	return (preset.inputs ?? [])
-		.filter((i) => !i.is_required || !isMappable(i))
-		.map((i) => ({
-			name: (i.display_name || i.field) + (i.is_required ? ' (required)' : ''),
-			value: i.field,
-		}));
+	return inputFields(await fetchPreset(this), false /*required*/);
 }
 
 // listSearch for an optional input's value: GET /trigger-presets/{id}/input-values, re-queried on
