@@ -6,7 +6,13 @@ import type {
 	ResourceMapperFields,
 } from 'n8n-workflow';
 import { gleanApiRequest } from './GleanClientTriggerHelpers';
-import { MAX_PRESET_PAGES, PRESET_PAGE_SIZE, TRIGGER_PRESETS_PATH, presetPath } from './constants';
+import {
+	MAX_PRESET_PAGES,
+	PRESET_PAGE_SIZE,
+	TRIGGER_PRESETS_PATH,
+	presetInputValuesPath,
+	presetPath,
+} from './constants';
 
 interface InputValue {
 	value: string;
@@ -155,13 +161,24 @@ export async function getOptionalInputFields(
 		.map((i) => ({ name: i.display_name || i.field, value: i.field }));
 }
 
-// loadOptions for an optional input's value dropdown: the chosen field's values.
-export async function getOptionalInputValues(
+// listSearch for an optional input's value: GET /trigger-presets/{id}/input-values, re-queried on
+// every keystroke. This is the only n8n hook that receives the typed filter, so it is what lets a
+// caller reach past the bounded set the preset embeds (is_truncated).
+export async function searchInputValues(
 	this: ILoadOptionsFunctions,
-): Promise<INodePropertyOptions[]> {
+	filter?: string,
+): Promise<INodeListSearchResult> {
+	const presetId = presetIdFrom(this.getCurrentNodeParameter('preset'));
 	const field = String(this.getCurrentNodeParameter('&field') ?? '');
-	if (!field) return [];
-	const preset = await fetchPreset(this);
-	const input = (preset?.inputs ?? []).find((i) => i.field === field);
-	return toValueOptions(input?.values ?? []);
+	if (!presetId || !field) return { results: [] };
+	const qs: Record<string, string> = { field };
+	if (filter) qs.query = filter;
+	const response = await gleanApiRequest.call(
+		this,
+		'GET',
+		presetInputValuesPath(presetId),
+		{},
+		qs,
+	);
+	return { results: toValueOptions((response.results as InputValue[]) ?? []) };
 }

@@ -16,7 +16,7 @@ import {
 	searchPresets,
 	getRequiredPresetInputs,
 	getOptionalInputFields,
-	getOptionalInputValues,
+	searchInputValues,
 } from './GleanClientTriggerLoadOptions';
 import { TRIGGERS_PATH, WEBHOOK_RESPONSES, triggerPath, presetPath } from './constants';
 
@@ -138,15 +138,27 @@ export class GleanClientTrigger implements INodeType {
 								},
 							},
 							{
-								displayName: 'Value Name or ID',
+								displayName: 'Value',
 								name: 'value',
-								type: 'options',
-								default: '',
-								description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-								typeOptions: {
-									loadOptionsMethod: 'getOptionalInputValues',
-									loadOptionsDependsOn: ['&field'],
-								},
+								type: 'resourceLocator',
+								default: { mode: 'list', value: '' },
+								description: 'The value to match on. Search the list, or enter a value directly.',
+								modes: [
+									{
+										displayName: 'From List',
+										name: 'list',
+										type: 'list',
+										typeOptions: {
+											searchListMethod: 'searchInputValues',
+											searchable: true,
+										},
+									},
+									{
+										displayName: 'By Value',
+										name: 'value',
+										type: 'string',
+									},
+								],
 							},
 						],
 					},
@@ -158,13 +170,13 @@ export class GleanClientTrigger implements INodeType {
 	methods = {
 		listSearch: {
 			searchPresets,
+			searchInputValues,
 		},
 		resourceMapping: {
 			getRequiredPresetInputs,
 		},
 		loadOptions: {
 			getOptionalInputFields,
-			getOptionalInputValues,
 		},
 	};
 
@@ -206,11 +218,12 @@ export class GleanClientTrigger implements INodeType {
 				// resourceMapper stores mapped values under `.value`, keyed by field id.
 				const requiredMapped = this.getNodeParameter('requiredInputs', {}) as { value?: IDataObject };
 				const optionalRaw = this.getNodeParameter('optionalInputs', {}) as {
-					input?: Array<{ field: string; value: string }>;
+					input?: Array<{ field: string; value: string | { value?: string } }>;
 				};
 				const inputs: IDataObject = { ...(requiredMapped.value ?? {}) };
 				for (const i of optionalRaw.input ?? []) {
-					inputs[i.field] = i.value;
+					// resourceLocator values arrive as { __rl, mode, value }; plain modes as a string.
+					inputs[i.field] = typeof i.value === 'object' ? (i.value?.value ?? '') : i.value;
 				}
 
 				// Fail fast with a clear message if a required input is missing, rather than a backend 400.
