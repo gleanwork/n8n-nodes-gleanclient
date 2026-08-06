@@ -112,15 +112,16 @@ export class GleanClientTrigger implements INodeType {
 				},
 			},
 			{
-				displayName: 'Optional Inputs',
+				displayName: 'Additional Inputs',
 				name: 'optionalInputs',
 				type: 'fixedCollection',
 				typeOptions: {
 					multipleValues: true,
 				},
 				default: {},
-				placeholder: 'Add Optional Input',
-				description: 'Optional fields to further narrow this trigger',
+				placeholder: 'Add Input',
+				description:
+					'Fields to further narrow this trigger. Inputs with too many values to list (e.g. a Slack channel) are set here so they can be searched, and are marked "(required)" when the preset requires them.',
 				options: [
 					{
 						name: 'input',

@@ -140,6 +140,13 @@ function toMapperField(input: PresetInput): ResourceMapperField {
 	return field;
 }
 
+// A truncated value set can't be a resourceMapper dropdown: ResourceMapperField only carries a
+// static options array, so the values past the bounded set would be unreachable. Those inputs move
+// to the searchable collection instead.
+function isMappable(input: PresetInput): boolean {
+	return !input.is_truncated;
+}
+
 // resourceMapping method for "Required Inputs": the preset's required inputs, rendered expanded.
 // The schedule offset (time_offset) is just another required picklist input. Refreshes on preset change.
 export async function getRequiredPresetInputs(
@@ -147,7 +154,11 @@ export async function getRequiredPresetInputs(
 ): Promise<ResourceMapperFields> {
 	const preset = await fetchPreset(this);
 	if (!preset) return { fields: [] };
-	return { fields: (preset.inputs ?? []).filter((i) => i.is_required).map(toMapperField) };
+	return {
+		fields: (preset.inputs ?? [])
+			.filter((i) => i.is_required && isMappable(i))
+			.map(toMapperField),
+	};
 }
 
 // loadOptions for the "Optional Inputs" field dropdown: the preset's optional input field names.
@@ -157,8 +168,11 @@ export async function getOptionalInputFields(
 	const preset = await fetchPreset(this);
 	if (!preset) return [];
 	return (preset.inputs ?? [])
-		.filter((i) => !i.is_required)
-		.map((i) => ({ name: i.display_name || i.field, value: i.field }));
+		.filter((i) => !i.is_required || !isMappable(i))
+		.map((i) => ({
+			name: (i.display_name || i.field) + (i.is_required ? ' (required)' : ''),
+			value: i.field,
+		}));
 }
 
 // listSearch for an optional input's value: GET /trigger-presets/{id}/input-values, re-queried on
