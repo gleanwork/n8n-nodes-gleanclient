@@ -11,11 +11,11 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 
-import { gleanApiRequest, verifyStandardWebhookSignature, is404 } from './GleanTriggerHelpers';
-import { searchPresets, getPresetInputs } from './GleanTriggerLoadOptions';
+import { gleanApiRequest, verifyStandardWebhookSignature, is404 } from './GleanClientTriggerHelpers';
+import { searchPresets, getPresetInputs } from './GleanClientTriggerLoadOptions';
 import { TRIGGERS_PATH, WEBHOOK_RESPONSES, triggerPath } from './constants';
 
-export class GleanTrigger implements INodeType {
+export class GleanClientTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Glean Trigger',
 		name: 'gleanClientTrigger',
