@@ -39,7 +39,9 @@
 		"n8nNodesApiVersion": 1,
 		"strict": true,
 		"credentials": [
-			"dist/credentials/GleanClientApi.credentials.js"
+			"dist/credentials/GleanClientApi.credentials.js",
+			"dist/credentials/GleanOAuth2Api.credentials.js",
+			"dist/credentials/GleanTriggerApi.credentials.js"
 		],
 		"nodes": [
 			"dist/nodes/GleanClient/GleanClient.node.js"
