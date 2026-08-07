@@ -51,13 +51,13 @@
 	},
 	"devDependencies": {
 		"@n8n/eslint-plugin-community-nodes": "^0.28.0",
-		"@n8n/node-cli": "^0.40.3",
-		"@types/node": "^25.9.2",
+		"@n8n/node-cli": "^0.41.2",
+		"@types/node": "^26.1.1",
 		"@typescript-eslint/parser": "^8.35.0",
-		"eslint": "9.32.0",
-		"knip": "^5.0.0",
-		"release-it": "^19.0.4",
-		"typescript": "^5.8.2"
+		"eslint": "10.8.0",
+		"knip": "^6.29.0",
+		"release-it": "^20.2.1",
+		"typescript": "^7.0.2"
 	},
 	"peerDependencies": {
 		"n8n-workflow": "*"
