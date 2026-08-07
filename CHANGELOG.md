@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Fix Glean Trigger verification by surfacing stale-trigger cleanup failures.
+
 ## 0.3.0
 
 - Introduce the Glean Trigger node (preset-based, HMAC-verified webhooks) and its credentials (Glean OAuth2 and Glean Trigger API).

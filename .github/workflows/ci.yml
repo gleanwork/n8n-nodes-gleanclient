@@ -20,11 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
+      - uses: jdx/mise-action@v2
       - run: pnpm install --frozen-lockfile
       - run: pnpm run lint
 
@@ -33,14 +29,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [20, 22]
+        include:
+          - node-version: 20
+            npm-version: 10
+          - node-version: 22
+            npm-version: latest
+    env:
+      MISE_NODE_VERSION: ${{ matrix.node-version }}
+      MISE_NPM_VERSION: ${{ matrix.npm-version }}
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: pnpm
+      - uses: jdx/mise-action@v2
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
 
@@ -48,11 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
+      - uses: jdx/mise-action@v2
       - run: pnpm install --frozen-lockfile
       - run: pnpm run knip
 
@@ -60,11 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
+      - uses: jdx/mise-action@v2
       - run: pnpm install --frozen-lockfile
       - run: pnpm run license:check
 
@@ -75,11 +66,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
+      - uses: jdx/mise-action@v2
       - run: pnpm install --frozen-lockfile
       - run: pnpm audit --prod --audit-level=high
 

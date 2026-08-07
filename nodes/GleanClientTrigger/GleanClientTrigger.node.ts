@@ -9,6 +9,7 @@ import {
 	NodeConnectionTypes,
 	NodeApiError,
 	NodeOperationError,
+	ensureError,
 } from 'n8n-workflow';
 
 import { gleanApiRequest, verifyStandardWebhookSignature, is404 } from './GleanClientTriggerHelpers';
@@ -155,8 +156,10 @@ export class GleanClientTrigger implements INodeType {
 				if (webhookData.triggerId) {
 					try {
 						await gleanApiRequest.call(this, 'DELETE', triggerPath(webhookData.triggerId as string));
-					} catch {
-						// ignore
+					} catch (error) {
+						if (!is404(error)) {
+							throw new NodeApiError(this.getNode(), { message: ensureError(error).message });
+						}
 					}
 					delete webhookData.triggerId;
 					delete webhookData.secret;
