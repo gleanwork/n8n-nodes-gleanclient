@@ -155,8 +155,8 @@ export class GleanClientTrigger implements INodeType {
 				if (webhookData.triggerId) {
 					try {
 						await gleanApiRequest.call(this, 'DELETE', triggerPath(webhookData.triggerId as string));
-					} catch {
-						// ignore
+					} catch (error) {
+						this.logger.warn(`Glean Trigger: failed to delete stale trigger before re-create: ${error}`);
 					}
 					delete webhookData.triggerId;
 					delete webhookData.secret;
