@@ -1,0 +1,4 @@
+[tools]
+node = "22"
+npm = "latest"
+pnpm = "10.15.0"

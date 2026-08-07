@@ -1,6 +1,6 @@
 {
 	"name": "@gleanwork/n8n-nodes-gleanclient",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"description": "n8n nodes to interact with Glean",
 	"keywords": [
 		"n8n-community-node-package"
@@ -30,7 +30,8 @@
 		"release": "n8n-node release",
 		"prepublishOnly": "n8n-node prerelease",
 		"knip": "knip",
-		"license:check": "node scripts/check-licenses.mjs"
+		"license:check": "node scripts/check-licenses.mjs",
+		"lint:community": "eslint --no-config-lookup --config eslint.community.config.mjs nodes credentials"
 	},
 	"files": [
 		"dist"
@@ -49,8 +50,10 @@
 		]
 	},
 	"devDependencies": {
+		"@n8n/eslint-plugin-community-nodes": "^0.28.0",
 		"@n8n/node-cli": "^0.40.3",
 		"@types/node": "^25.9.2",
+		"@typescript-eslint/parser": "^8.35.0",
 		"eslint": "9.32.0",
 		"knip": "^5.0.0",
 		"release-it": "^19.0.4",
