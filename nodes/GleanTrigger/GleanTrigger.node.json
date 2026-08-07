@@ -1,0 +1,18 @@
+{
+  "node": "n8n-nodes-gleanclient.gleanTrigger",
+  "nodeVersion": "1.0",
+  "codexVersion": "1.0",
+  "categories": ["Productivity", "Miscellaneous"],
+  "resources": {
+    "credentialDocumentation": [
+      {
+        "url": "https://developers.glean.com/api-info/client/authentication/overview"
+      }
+    ],
+    "primaryDocumentation": [
+      {
+        "url": "https://github.com/gleanwork/n8n-nodes-gleanclient#readme"
+      }
+    ]
+  }
+}
