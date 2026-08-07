@@ -16,6 +16,15 @@ import { gleanApiRequest, verifyStandardWebhookSignature, is404 } from './GleanC
 import { searchPresets, getPresetInputs } from './GleanClientTriggerLoadOptions';
 import { TRIGGERS_PATH, WEBHOOK_RESPONSES, triggerPath } from './constants';
 
+async function deleteTriggerIfExists(this: IHookFunctions, triggerId: string): Promise<void> {
+	try {
+		await gleanApiRequest.call(this, 'DELETE', triggerPath(triggerId));
+	} catch (error) {
+		if (is404(error)) return;
+		throw new NodeApiError(this.getNode(), { message: ensureError(error).message });
+	}
+}
+
 export class GleanClientTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Glean Trigger',
@@ -154,13 +163,7 @@ export class GleanClientTrigger implements INodeType {
 				const webhookData = this.getWorkflowStaticData('node');
 				// Self-heal: drop any leftover trigger from a prior failed cleanup before creating a new one.
 				if (webhookData.triggerId) {
-					try {
-						await gleanApiRequest.call(this, 'DELETE', triggerPath(webhookData.triggerId as string));
-					} catch (error) {
-						if (!is404(error)) {
-							throw new NodeApiError(this.getNode(), { message: ensureError(error).message });
-						}
-					}
+					await deleteTriggerIfExists.call(this, String(webhookData.triggerId));
 					delete webhookData.triggerId;
 					delete webhookData.secret;
 				}
@@ -205,14 +208,7 @@ export class GleanClientTrigger implements INodeType {
 				if (!webhookData.triggerId) {
 					return true;
 				}
-				try {
-					await gleanApiRequest.call(this, 'DELETE', triggerPath(webhookData.triggerId as string));
-				} catch (error) {
-					// 404 = already gone; anything else is a real failure worth surfacing.
-					if (!is404(error)) {
-						throw new NodeApiError(this.getNode(), error as JsonObject);
-					}
-				}
+				await deleteTriggerIfExists.call(this, String(webhookData.triggerId));
 				delete webhookData.triggerId;
 				delete webhookData.secret;
 				return true;
