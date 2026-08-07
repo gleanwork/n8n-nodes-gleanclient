@@ -11,20 +11,20 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 
-import { gleanApiRequest, verifyStandardWebhookSignature, is404 } from './GleanTriggerHelpers';
-import { searchPresets, getPresetInputs } from './GleanTriggerLoadOptions';
+import { gleanApiRequest, verifyStandardWebhookSignature, is404 } from './GleanClientTriggerHelpers';
+import { searchPresets, getPresetInputs } from './GleanClientTriggerLoadOptions';
 import { TRIGGERS_PATH, WEBHOOK_RESPONSES, triggerPath } from './constants';
 
-export class GleanTrigger implements INodeType {
+export class GleanClientTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Glean Trigger',
-		name: 'gleanTrigger',
+		name: 'gleanClientTrigger',
 		icon: { light: 'file:../../icons/glean.svg', dark: 'file:../../icons/glean-dark.svg' },
 		group: ['trigger'],
 		version: 1,
 		usableAsTool: true,
 		subtitle: '={{$parameter["preset"]["cachedResultName"] || $parameter["preset"]["value"] || $parameter["preset"]}}',
-		description: 'Starts the workflow when a Glean content trigger fires',
+		description: '[Experimental] Starts the workflow when a Glean content trigger fires',
 		defaults: {
 			name: 'Glean Trigger',
 		},

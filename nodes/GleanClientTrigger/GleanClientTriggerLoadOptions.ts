@@ -3,7 +3,7 @@ import type {
 	INodePropertyOptions,
 	INodeListSearchResult,
 } from 'n8n-workflow';
-import { gleanApiRequest } from './GleanTriggerHelpers';
+import { gleanApiRequest } from './GleanClientTriggerHelpers';
 import { MAX_PRESET_PAGES, PRESET_PAGE_SIZE, TRIGGER_PRESETS_PATH, presetPath } from './constants';
 
 interface Preset {

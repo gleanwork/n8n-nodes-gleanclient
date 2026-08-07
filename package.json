@@ -1,6 +1,6 @@
 {
 	"name": "@gleanwork/n8n-nodes-gleanclient",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "n8n nodes to interact with Glean",
 	"keywords": [
 		"n8n-community-node-package"
@@ -45,7 +45,7 @@
 		],
 		"nodes": [
 			"dist/nodes/GleanClient/GleanClient.node.js",
-			"dist/nodes/GleanTrigger/GleanTrigger.node.js"
+			"dist/nodes/GleanClientTrigger/GleanClientTrigger.node.js"
 		]
 	},
 	"devDependencies": {

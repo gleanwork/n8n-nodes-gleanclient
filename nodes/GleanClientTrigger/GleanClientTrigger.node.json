@@ -1,5 +1,5 @@
 {
-  "node": "n8n-nodes-gleanclient.gleanTrigger",
+  "node": "n8n-nodes-gleanclient.gleanClientTrigger",
   "nodeVersion": "1.0",
   "codexVersion": "1.0",
   "categories": ["Productivity", "Miscellaneous"],
