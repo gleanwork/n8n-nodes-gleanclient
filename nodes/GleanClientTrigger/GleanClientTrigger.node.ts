@@ -5,6 +5,7 @@ import {
 	type INodeTypeDescription,
 	type IWebhookResponseData,
 	type IDataObject,
+	type INodePropertyCollection,
 	type JsonObject,
 	NodeConnectionTypes,
 	NodeApiError,
@@ -13,8 +14,81 @@ import {
 
 import { gleanApiRequest, is404 } from './apiClient';
 import { verifyStandardWebhookSignature } from './webhookSignature';
-import { searchPresets, getPresetInputs } from './GleanClientTriggerLoadOptions';
-import { TRIGGERS_PATH, WEBHOOK_RESPONSES, triggerPath } from './constants';
+import {
+	searchPresets,
+	getPresetInputFields,
+	searchInputValues,
+} from './GleanClientTriggerLoadOptions';
+import { TRIGGERS_PATH, WEBHOOK_RESPONSES, triggerPath, presetPath } from './constants';
+import type { Preset, PresetInput } from './types';
+
+// One input row: choose a field, then search or type its value.
+function inputRow(): INodePropertyCollection {
+	return {
+		name: 'input',
+		displayName: 'Input',
+		values: [
+			{
+				displayName: 'Field Name or ID',
+				name: 'field',
+				type: 'options',
+				default: '',
+				description:
+					'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+				typeOptions: {
+					loadOptionsMethod: 'getPresetInputFields',
+					loadOptionsDependsOn: ['preset.value'],
+				},
+			},
+			{
+				displayName: 'Value',
+				name: 'value',
+				type: 'resourceLocator',
+				default: { mode: 'list', value: '' },
+				description: 'The value to match on. Search the list, or enter a value directly.',
+				// Re-query when the sibling field changes, so the value list isn't served from the
+				// cache populated before a field was picked.
+				typeOptions: {
+					loadOptionsDependsOn: ['&field', 'preset.value'],
+				},
+				modes: [
+					{
+						displayName: 'From List',
+						name: 'list',
+						type: 'list',
+						typeOptions: {
+							searchListMethod: 'searchInputValues',
+							searchable: true,
+						},
+					},
+					{
+						displayName: 'By Value',
+						name: 'value',
+						type: 'string',
+					},
+				],
+			},
+		],
+	};
+}
+
+// Flatten the input collection into { field: value }. resourceLocator values arrive as
+// { __rl, mode, value }; plain modes as a string.
+function collectInputs(ctx: IHookFunctions): IDataObject {
+	const inputs: IDataObject = {};
+	const rows = ctx.getNodeParameter('inputs', {}) as {
+		input?: Array<{ field: string; value: string | { value?: string } }>;
+	};
+	for (const i of rows.input ?? []) {
+		if (!i.field) continue;
+		const value = typeof i.value === 'object' ? (i.value?.value ?? '') : i.value;
+		// Skip blanks: an added-but-unset row (or a free-text value typed but never picked from
+		// the list) must not be sent as an empty filter that silently matches nothing.
+		if (value === '') continue;
+		inputs[i.field] = value;
+	}
+	return inputs;
+}
 
 export class GleanClientTrigger implements INodeType {
 	description: INodeTypeDescription = {
@@ -90,33 +164,9 @@ export class GleanClientTrigger implements INodeType {
 				},
 				default: {},
 				placeholder: 'Add Input',
-				description: 'Values for the fields this preset accepts',
-				options: [
-					{
-						name: 'input',
-						displayName: 'Input',
-						values: [
-							{
-								displayName: 'Field Name or ID',
-								name: 'field',
-								type: 'options',
-								default: '',
-								description:
-									'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-								typeOptions: {
-									loadOptionsMethod: 'getPresetInputs',
-									loadOptionsDependsOn: ['preset'],
-								},
-							},
-							{
-								displayName: 'Value',
-								name: 'value',
-								type: 'string',
-								default: '',
-							},
-						],
-					},
-				],
+				description:
+					'Filters for this trigger. Required fields are marked "(required)" and must all be set.',
+				options: [inputRow()],
 			},
 		],
 	};
@@ -124,9 +174,10 @@ export class GleanClientTrigger implements INodeType {
 	methods = {
 		listSearch: {
 			searchPresets,
+			searchInputValues,
 		},
 		loadOptions: {
-			getPresetInputs,
+			getPresetInputFields,
 		},
 	};
 
@@ -165,13 +216,31 @@ export class GleanClientTrigger implements INodeType {
 
 				const webhookUrl = this.getNodeWebhookUrl('default');
 				const preset = this.getNodeParameter('preset', undefined, { extractValue: true }) as string;
-				const inputsRaw = this.getNodeParameter('inputs', {}) as {
-					input?: Array<{ field: string; value: string }>;
-				};
+				const inputs = collectInputs(this);
 
-				const inputs: IDataObject = {};
-				for (const i of inputsRaw.input ?? []) {
-					inputs[i.field] = i.value;
+				const presetResp = await gleanApiRequest.call(this, 'GET', presetPath(preset));
+				const presetInputs: PresetInput[] = (presetResp.trigger_preset as Preset)?.inputs ?? [];
+				const validFields = new Set(presetInputs.map((i) => i.field));
+
+				// Switching the Trigger leaves stale rows from the old preset in the collection. Reject
+				// any input the selected preset doesn't define.
+				const unsupported = Object.keys(inputs).filter((f) => !validFields.has(f));
+				if (unsupported.length > 0) {
+					throw new NodeOperationError(
+						this.getNode(),
+						`These inputs aren't part of the selected trigger — remove them: ${unsupported.join(', ')}`,
+					);
+				}
+
+				// Fail fast with a clear message if a required input is missing, rather than a backend 400.
+				const missing = presetInputs
+					.filter((i) => i.is_required && !inputs[i.field])
+					.map((i) => i.display_name || i.field);
+				if (missing.length > 0) {
+					throw new NodeOperationError(
+						this.getNode(),
+						`Missing required input(s) for this trigger: ${missing.join(', ')}`,
+					);
 				}
 
 				const body: IDataObject = {

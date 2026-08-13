@@ -7,6 +7,8 @@ export const TRIGGER_PRESETS_PATH = '/trigger-presets';
 
 export const triggerPath = (triggerId: string): string => `${TRIGGERS_PATH}/${triggerId}`;
 export const presetPath = (presetId: string): string => `${TRIGGER_PRESETS_PATH}/${presetId}`;
+export const presetInputValuesPath = (presetId: string): string =>
+	`${presetPath(presetId)}/input-values`;
 
 export const PRESET_PAGE_SIZE = 100;
 // Safety cap against a misbehaving has_more.

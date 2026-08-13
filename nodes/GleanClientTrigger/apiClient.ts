@@ -24,6 +24,21 @@ export function is404(error: unknown): boolean {
 	);
 }
 
+// Robust 400 check across the shapes n8n/HTTP errors can take.
+export function is400(error: unknown): boolean {
+	const e = error as {
+		httpCode?: string;
+		statusCode?: number;
+		response?: { statusCode?: number; status?: number };
+	};
+	return (
+		e?.httpCode === '400' ||
+		e?.statusCode === 400 ||
+		e?.response?.statusCode === 400 ||
+		e?.response?.status === 400
+	);
+}
+
 function resolveCredentialType(
 	ctx: IHookFunctions | IWebhookFunctions | ILoadOptionsFunctions,
 ): string {
