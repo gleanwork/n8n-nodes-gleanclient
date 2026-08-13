@@ -14,12 +14,19 @@ import {
 
 import { gleanApiRequest, is404 } from './apiClient';
 import { verifyStandardWebhookSignature } from './webhookSignature';
+import { generateEphemeralSecret, fetchRecentPresetEvents, deliverPreviewEvent } from './preview';
 import {
 	searchPresets,
 	getPresetInputFields,
 	searchInputValues,
 } from './GleanClientTriggerLoadOptions';
-import { TRIGGERS_PATH, WEBHOOK_RESPONSES, triggerPath, presetPath } from './constants';
+import {
+	TRIGGERS_PATH,
+	WEBHOOK_RESPONSES,
+	triggerPath,
+	presetPath,
+	MANUAL_MODE,
+} from './constants';
 import type { Preset, PresetInput } from './types';
 
 // One input row: choose a field, then search or type its value.
@@ -100,6 +107,16 @@ export class GleanClientTrigger implements INodeType {
 		usableAsTool: true,
 		subtitle: '={{$parameter["preset"]["cachedResultName"] || $parameter["preset"]["value"] || $parameter["preset"]}}',
 		description: '[Experimental] Starts the workflow when a Glean content trigger fires',
+		triggerPanel: {
+			header: 'Preview a recent Glean event',
+			executionsHelp: {
+				inactive:
+					"Click 'execute step' to preview a recent matching event so you can map the document shape for the next step. Nothing is registered and no live delivery happens here.<br /><br />Once published, every matching event triggers an execution — those appear in the <a data-key='executions'>executions list</a>, not here.",
+				active:
+					"Click 'execute step' to preview a recent matching event.<br /><br />This workflow is published, so live events also trigger executions — those appear in the <a data-key='executions'>executions list</a>, not here.",
+			},
+			activationHint: 'Publish the workflow to receive live Glean events as they happen.',
+		},
 		defaults: {
 			name: 'Glean Trigger',
 		},
@@ -123,6 +140,8 @@ export class GleanClientTrigger implements INodeType {
 				httpMethod: 'POST',
 				responseMode: 'onReceived',
 				path: 'webhook',
+				// URL is registered with Glean internally, never copied by the user — hide the panel.
+				ndvHideUrl: true,
 			},
 		],
 		properties: [
@@ -243,6 +262,35 @@ export class GleanClientTrigger implements INodeType {
 					);
 				}
 
+				// n8n has no "return sample data" hook for a webhook trigger; on manual Execute we preview
+				// by searching the preset's recent events and self-delivering the newest to our own test
+				// webhook. Search first (awaited) so a bad input or no match fails fast instead of hanging.
+				if (this.getMode() === MANUAL_MODE) {
+					if (!webhookUrl) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'Cannot preview: n8n did not provide a test webhook URL.',
+						);
+					}
+					const events = await fetchRecentPresetEvents.call(this, preset, inputs);
+					if (events.length === 0) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'No matching Glean events found to preview. Check the inputs above, or activate the workflow to receive live events.',
+						);
+					}
+					const secret = generateEphemeralSecret();
+					webhookData.secret = secret;
+					// Fire-and-forget: n8n only starts listening after create() returns, so the (retrying)
+					// delivery must run after we return.
+					void deliverPreviewEvent
+						.call(this, webhookUrl, secret, events[0])
+						.catch((error) =>
+							this.logger.error(`Glean Trigger: event preview delivery failed: ${error}`),
+						);
+					return true;
+				}
+
 				const body: IDataObject = {
 					preset_id: preset,
 					inputs,
@@ -270,6 +318,8 @@ export class GleanClientTrigger implements INodeType {
 			async delete(this: IHookFunctions): Promise<boolean> {
 				const webhookData = this.getWorkflowStaticData('node');
 				if (!webhookData.triggerId) {
+					// Manual test leaves only an ephemeral secret behind; clear it.
+					delete webhookData.secret;
 					return true;
 				}
 				try {
