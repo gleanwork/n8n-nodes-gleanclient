@@ -7,7 +7,6 @@ import type {
 	IDataObject,
 } from 'n8n-workflow';
 
-import { verifyWebhookSignature } from './webhookSignature';
 import { CREDENTIAL_API_KEY, CREDENTIAL_OAUTH2 } from './constants';
 
 // Robust 404 check across the shapes n8n/HTTP errors can take.
@@ -77,18 +76,4 @@ export async function gleanApiRequest(
 		credentialType,
 		options,
 	)) as IDataObject;
-}
-
-export function verifyStandardWebhookSignature(this: IWebhookFunctions, secret: string): boolean {
-	const req = this.getRequestObject();
-	const rawBody = req.rawBody;
-	const bodyStr = Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : String(rawBody ?? '');
-
-	return verifyWebhookSignature({
-		id: req.header('webhook-id'),
-		timestamp: req.header('webhook-timestamp'),
-		signatureHeader: req.header('webhook-signature'),
-		rawBody: bodyStr,
-		secret,
-	});
 }
