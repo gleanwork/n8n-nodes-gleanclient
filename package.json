@@ -1,15 +1,21 @@
 {
 	"name": "@gleanwork/n8n-nodes-gleanclient",
-	"version": "0.3.2",
+	"version": "0.4.0",
 	"description": "n8n nodes to interact with Glean",
 	"keywords": [
-		"n8n-community-node-package"
+		"n8n-community-node-package",
+		"glean",
+		"enterprise-search",
+		"search",
+		"trigger",
+		"webhook"
 	],
 	"license": "MIT",
 	"homepage": "https://www.glean.com",
 	"author": {
-		"name": "Dejim Juang",
-		"email": "dejim.juang@glean.com"
+		"name": "Glean",
+		"email": "gleanwork@glean.com",
+		"url": "https://www.glean.com"
 	},
 	"repository": {
 		"type": "git",
@@ -34,7 +40,8 @@
 		"lint:community": "eslint --no-config-lookup --config eslint.community.config.mjs nodes credentials"
 	},
 	"files": [
-		"dist"
+		"dist",
+		"CHANGELOG.md"
 	],
 	"n8n": {
 		"n8nNodesApiVersion": 1,
