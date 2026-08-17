@@ -11,7 +11,8 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 
-import { gleanApiRequest, verifyStandardWebhookSignature, is404 } from './GleanClientTriggerHelpers';
+import { gleanApiRequest, is404 } from './apiClient';
+import { verifyStandardWebhookSignature } from './webhookSignature';
 import { searchPresets, getPresetInputs } from './GleanClientTriggerLoadOptions';
 import { TRIGGERS_PATH, WEBHOOK_RESPONSES, triggerPath } from './constants';
 

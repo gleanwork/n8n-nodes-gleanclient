@@ -1,3 +1,4 @@
+import type { IWebhookFunctions } from 'n8n-workflow';
 import { createHmac, timingSafeEqual } from 'crypto';
 
 const SECRET_PREFIX = 'whsec_';
@@ -18,7 +19,7 @@ interface WebhookSignatureInput {
 }
 
 // Verifies a Standard Webhooks signature: HMAC-SHA256 over `{id}.{timestamp}.{rawBody}`.
-export function verifyWebhookSignature(input: WebhookSignatureInput): boolean {
+function verifyWebhookSignature(input: WebhookSignatureInput): boolean {
 	const {
 		id,
 		timestamp,
@@ -51,4 +52,19 @@ export function verifyWebhookSignature(input: WebhookSignatureInput): boolean {
 		}
 	}
 	return false;
+}
+
+// Verifies the Standard Webhooks headers on an incoming n8n webhook request.
+export function verifyStandardWebhookSignature(this: IWebhookFunctions, secret: string): boolean {
+	const req = this.getRequestObject();
+	const rawBody = req.rawBody;
+	const bodyStr = Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : String(rawBody ?? '');
+
+	return verifyWebhookSignature({
+		id: req.header('webhook-id'),
+		timestamp: req.header('webhook-timestamp'),
+		signatureHeader: req.header('webhook-signature'),
+		rawBody: bodyStr,
+		secret,
+	});
 }
