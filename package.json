@@ -58,10 +58,10 @@
 	},
 	"devDependencies": {
 		"@n8n/eslint-plugin-community-nodes": "^0.28.0",
-		"@n8n/node-cli": "^0.40.3",
+		"@n8n/node-cli": "^0.42.0",
 		"@types/node": "^25.9.2",
 		"@typescript-eslint/parser": "^8.35.0",
-		"eslint": "9.32.0",
+		"eslint": "9.39.5",
 		"knip": "^5.0.0",
 		"release-it": "^19.0.4",
 		"typescript": "^5.8.2"
