@@ -3,6 +3,13 @@ import { createHmac, timingSafeEqual } from 'crypto';
 
 const SECRET_PREFIX = 'whsec_';
 const SIGNATURE_VERSION = 'v1';
+
+// Standard Webhooks header names — used both to sign outbound and to verify inbound deliveries.
+export const WEBHOOK_HEADERS = {
+	id: 'webhook-id',
+	timestamp: 'webhook-timestamp',
+	signature: 'webhook-signature',
+} as const;
 // Recommended replay window is 5 minutes (Standard Webhooks spec).
 const DEFAULT_TOLERANCE_SECONDS = 300;
 
@@ -16,6 +23,23 @@ interface WebhookSignatureInput {
 	secret: string;
 	// Replay window in seconds; deliveries outside it are rejected.
 	toleranceSeconds?: number;
+}
+
+// HMAC-SHA256 over `{id}.{timestamp}.{rawBody}`, base64 — the shared core of sign and verify.
+function computeSignature(secret: string, id: string, timestamp: string, rawBody: string): string {
+	const keyBytes = Buffer.from(secret.slice(SECRET_PREFIX.length), 'base64');
+	return createHmac('sha256', keyBytes).update(`${id}.${timestamp}.${rawBody}`).digest('base64');
+}
+
+// Builds a Standard Webhooks signature header value for self-delivering a preview event to n8n's
+// own test webhook. Mirrors the verifier below.
+export function signWebhookPayload(
+	secret: string,
+	id: string,
+	timestamp: string,
+	rawBody: string,
+): string {
+	return `${SIGNATURE_VERSION},${computeSignature(secret, id, timestamp, rawBody)}`;
 }
 
 // Verifies a Standard Webhooks signature: HMAC-SHA256 over `{id}.{timestamp}.{rawBody}`.
@@ -40,9 +64,7 @@ function verifyWebhookSignature(input: WebhookSignatureInput): boolean {
 	const now = Math.floor(Date.now() / 1000);
 	if (Math.abs(now - ts) > toleranceSeconds) return false;
 
-	const keyBytes = Buffer.from(secret.slice(SECRET_PREFIX.length), 'base64');
-	const signedString = `${id}.${timestamp}.${rawBody}`;
-	const expected = createHmac('sha256', keyBytes).update(signedString).digest('base64');
+	const expected = computeSignature(secret, id, timestamp, rawBody);
 	const expectedBuf = Buffer.from(`${SIGNATURE_VERSION},${expected}`);
 
 	for (const token of signatureHeader.split(' ')) {
@@ -61,9 +83,9 @@ export function verifyStandardWebhookSignature(this: IWebhookFunctions, secret: 
 	const bodyStr = Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : String(rawBody ?? '');
 
 	return verifyWebhookSignature({
-		id: req.header('webhook-id'),
-		timestamp: req.header('webhook-timestamp'),
-		signatureHeader: req.header('webhook-signature'),
+		id: req.header(WEBHOOK_HEADERS.id),
+		timestamp: req.header(WEBHOOK_HEADERS.timestamp),
+		signatureHeader: req.header(WEBHOOK_HEADERS.signature),
 		rawBody: bodyStr,
 		secret,
 	});
