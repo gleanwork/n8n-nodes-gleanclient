@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- Glean Trigger: no longer declares `usableAsTool` — trigger nodes can't be invoked as AI tools, so it's kept out of the AI tool picker (satisfies the n8n community-node scanner's `node-usable-as-tool`). Bumps `@n8n/eslint-plugin-community-nodes` and `@n8n/node-cli` so `lint:community` enforces this pre-merge.
+
 ## 0.4.0
 
 - Glean Trigger: preset input **value discovery** — picklist inputs offer a searchable, live-fetched value list; free-text inputs are entered directly ("By Value").

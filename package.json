@@ -1,6 +1,6 @@
 {
 	"name": "@gleanwork/n8n-nodes-gleanclient",
-	"version": "0.4.0",
+	"version": "0.4.1",
 	"description": "n8n nodes to interact with Glean",
 	"keywords": [
 		"n8n-community-node-package",
@@ -57,8 +57,8 @@
 		]
 	},
 	"devDependencies": {
-		"@n8n/eslint-plugin-community-nodes": "^0.28.0",
-		"@n8n/node-cli": "^0.40.3",
+		"@n8n/eslint-plugin-community-nodes": "^0.29.0",
+		"@n8n/node-cli": "^0.43.4",
 		"@types/node": "^25.9.2",
 		"@typescript-eslint/parser": "^8.35.0",
 		"eslint": "9.32.0",

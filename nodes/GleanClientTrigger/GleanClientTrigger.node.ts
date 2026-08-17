@@ -97,6 +97,7 @@ function collectInputs(ctx: IHookFunctions): IDataObject {
 	return inputs;
 }
 
+// eslint-disable-next-line @n8n/community-nodes/node-usable-as-tool -- trigger nodes can't be AI tools, so usableAsTool is omitted; n8n-node lint's bundled plugin (0.28.0) still requires it, but the scanner + @n8n/eslint-plugin-community-nodes 0.29.0 require omitting it
 export class GleanClientTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Glean Trigger',
@@ -104,7 +105,6 @@ export class GleanClientTrigger implements INodeType {
 		icon: { light: 'file:../../icons/glean.svg', dark: 'file:../../icons/glean-dark.svg' },
 		group: ['trigger'],
 		version: 1,
-		usableAsTool: true,
 		subtitle: '={{$parameter["preset"]["cachedResultName"] || $parameter["preset"]["value"] || $parameter["preset"]}}',
 		description: '[Experimental] Starts the workflow when a Glean content trigger fires',
 		triggerPanel: {
