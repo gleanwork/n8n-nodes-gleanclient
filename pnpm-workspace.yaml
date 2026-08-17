@@ -1,0 +1,7 @@
+# pnpm 10.15+ reads overrides from here, not package.json's `pnpm.overrides`.
+overrides:
+  # Force a patched nanoid (GHSA-28wg-ghj8-5hjv) pulled transitively via n8n-workflow > @n8n/utils.
+  # Kept on the 3.x line (what @n8n/utils expects) rather than jumping to nanoid 6 (ESM-only).
+  nanoid: '^3.3.18'
+  form-data: '>=4.0.6'
+  lodash: '>=4.18.1'
