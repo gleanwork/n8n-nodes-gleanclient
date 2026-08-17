@@ -9,6 +9,7 @@ The Glean Work AI platform lets you embed enterprise search, chat, and agent cap
 [Installation](#installation)
 [Nodes](#nodes)
 [Credentials](#credentials)
+[Example workflows](#example-workflows)
 [Compatibility](#compatibility)
 [Resources](#resources)
 [Version history](#version-history)
@@ -30,11 +31,12 @@ Starts a workflow when a Glean content-trigger event fires (e.g. a new high-prio
 How it works:
 
 1. **Pick a Trigger** — choose a curated preset from the searchable dropdown (grouped by datasource). The list is fetched live from Glean, so it always reflects what your deployment supports.
-2. **Fill inputs** (optional) — each preset advertises the fields it accepts (e.g. a Jira project); leave them blank to match broadly.
-3. **Activate** — on activation the node registers a trigger with Glean and stores the signing secret; on deactivation it removes the trigger.
+2. **Fill inputs** — each preset advertises the fields it accepts. Required fields are marked **(required)** and must be set; optional fields can be left blank to match broadly. Picklist inputs offer a searchable, live-fetched value list (**From List**); free-text inputs are typed directly (**By Value**).
+3. **Publish/activate** — the node registers a trigger with Glean and stores the signing secret; deactivating removes the trigger.
 4. **Receive events** — Glean POSTs signed events to the node's webhook URL; the node verifies the signature and passes the event to the rest of your workflow.
 
 Notes:
+- **Preview while building** — click **Execute step** to fetch a recent matching event and preview the data you'll receive before going live. Live events appear in the executions list once the workflow is active, not here.
 - The n8n instance must be reachable by Glean at a **public HTTPS** URL (n8n Cloud, or self-hosted with `WEBHOOK_URL` set) so events can be delivered.
 - Event payloads are thin by default (document metadata + a link), not full document bodies.
 
@@ -51,13 +53,13 @@ Notes:
 
 ## Example workflows
 
-**Notify Slack on new high-priority Jira tickets** (Glean Trigger → Slack):
+**Notify Slack when a new Gong call is recorded** (Glean Trigger → Slack):
 
-1. Add a **Glean Trigger** node. In **Trigger**, pick the Jira "new high-priority issue" preset; optionally set the **Project** input to scope it.
-2. Connect a **Glean OAuth2 API** credential (enter your deployment URL, click **Connect**), then **Activate** the workflow — the node registers the trigger with Glean and stores the signing secret.
-3. Add a **Slack → Send message** node after the trigger and map the event's document title + link into the message.
+1. Add a **Glean Trigger** node. In **Trigger**, pick the Gong "New Gong call created" preset.
+2. Connect a **Glean OAuth2 API** credential (enter your deployment URL, click **Connect**), then **publish/activate** the workflow — the node registers the trigger with Glean and stores the signing secret.
+3. Add a **Slack → Send message** node after the trigger and map the call's title + link into the message.
 
-When a matching ticket appears in Glean, Glean POSTs a signed event to the node's webhook URL; the node verifies the HMAC signature and passes the event downstream, posting to Slack.
+When a new call is recorded in Gong, Glean POSTs a signed event to the node's webhook URL; the node verifies the HMAC signature and passes the event downstream, posting to Slack.
 
 **Query Glean on demand** (Manual Trigger → Glean action node):
 
@@ -67,7 +69,7 @@ When a matching ticket appears in Glean, Glean POSTs a signed event to the node'
 
 ## Compatibility
 
-Tested locally against n8n 1.105.4
+Tested locally against n8n 2.34.6
 
 ## Resources
 
@@ -77,7 +79,8 @@ Tested locally against n8n 1.105.4
 
 ## Version history
 
-- August 8, 2025 - 0.1.2 - First.
-- August 8, 2025 - 0.1.3 - Fixed AI Agent tool usage.
-- August 9, 2025 - 0.1.4 - Updated names and added credential test.
-- August 9, 2025 - 0.1.5 - Fixed query body to pass the correct value.
+See [CHANGELOG.md](CHANGELOG.md) for the full history. Highlights:
+
+- **0.4.0** — Preset input value discovery (searchable value picker) and event preview on manual test.
+- **0.3.0** — Glean Trigger node: preset-based, HMAC-verified webhooks.
+- **0.2.0** — Glean (search) action node.

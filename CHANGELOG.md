@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+- Glean Trigger: preset input **value discovery** — picklist inputs offer a searchable, live-fetched value list; free-text inputs are entered directly ("By Value").
+- Glean Trigger: **event preview** on manual _Execute step_ — fetches a recent matching event and delivers it to the node (HMAC-verified) so you can preview the data before activating.
+
 ## 0.3.2
 
 - Scope the codex `node` ids to the npm package name (`@gleanwork/n8n-nodes-gleanclient.*`), addressing n8n review feedback.
