@@ -16,6 +16,13 @@ export const PRESET_PAGE_SIZE = 100;
 // Safety cap against a misbehaving has_more.
 export const MAX_PRESET_PAGES = 50;
 
+// The only input type /input-values can enumerate; everything else is free text.
+export const INPUT_TYPE_PICKLIST = 'PICKLIST';
+// Both load-options hooks re-fetch the same preset while a user fills one node in — the field
+// dropdown once, the value locator on every keystroke. Long enough to collapse that burst, short
+// enough that an edited preset shows up without restarting n8n.
+export const PRESET_CACHE_TTL_MS = 15_000;
+
 // Recent event pulled to preview a preset's document shape on manual test (one, like production).
 export const EVENTS_SEARCH_PAGE_SIZE = 1;
 // Give n8n a moment to register the test webhook before self-delivering to it.

@@ -7,13 +7,15 @@ import type {
 import { NodeApiError } from 'n8n-workflow';
 import { gleanApiRequest, is400 } from './apiClient';
 import {
+	INPUT_TYPE_PICKLIST,
 	MAX_PRESET_PAGES,
+	PRESET_CACHE_TTL_MS,
 	PRESET_PAGE_SIZE,
 	TRIGGER_PRESETS_PATH,
 	presetInputValuesPath,
 	presetPath,
 } from './constants';
-import type { InputValue, Preset } from './types';
+import type { InputValue, Preset, PresetInput } from './types';
 
 // Friendly datasource labels so the picker reads well and groups by source.
 const DATASOURCE_LABELS: Record<string, string> = {
@@ -77,13 +79,28 @@ export async function searchPresets(
 	return { results };
 }
 
+// Keyed by node so two nodes pointed at different Glean deployments can't share an entry —
+// preset ids are only unique within a deployment.
+const presetCache = new Map<string, { preset: Preset | null; expiresAt: number }>();
+
 // GET /trigger-presets/{preset_id} -> the preset (inputs may be null).
 async function fetchPreset(ctx: ILoadOptionsFunctions): Promise<Preset | null> {
 	const presetId = presetIdFrom(ctx.getCurrentNodeParameter('preset'));
 	if (!presetId) return null;
+	const key = `${ctx.getNode().id}|${presetId}`;
+	const now = Date.now();
+	const hit = presetCache.get(key);
+	if (hit && hit.expiresAt > now) return hit.preset;
+
 	const response = await gleanApiRequest.call(ctx, 'GET', presetPath(presetId));
 	// TriggerPresetGetResponse: { trigger_preset: {...}, request_id }.
-	return (response.trigger_preset as Preset) ?? (response as unknown as Preset);
+	const preset = (response.trigger_preset as Preset) ?? (response as unknown as Preset);
+	presetCache.set(key, { preset, expiresAt: now + PRESET_CACHE_TTL_MS });
+	// Drop expired entries so a long-lived editor session can't grow the map without bound.
+	for (const [cached, entry] of presetCache) {
+		if (entry.expiresAt <= now) presetCache.delete(cached);
+	}
+	return preset;
 }
 
 function toValueOptions(values: InputValue[]): INodePropertyOptions[] {
@@ -107,6 +124,17 @@ export async function getPresetInputFields(
 		}));
 }
 
+// Offer the typed text itself, so "From List" still captures a free-text value without forcing a
+// switch to "By Value".
+function typedValueOnly(filter?: string): INodeListSearchResult {
+	const typed = filter?.trim();
+	return { results: typed ? [{ name: typed, value: typed }] : [] };
+}
+
+function isPicklistInput(input?: PresetInput): boolean {
+	return input?.type === INPUT_TYPE_PICKLIST;
+}
+
 // listSearch for an input's value: GET /trigger-presets/{id}/input-values, re-queried on every
 // keystroke. This is the only n8n hook that receives the typed filter, so it is what lets a caller
 // reach past the bounded set the preset embeds (is_truncated). `query` prefix-matches on the value.
@@ -117,6 +145,21 @@ export async function searchInputValues(
 	const presetId = presetIdFrom(this.getCurrentNodeParameter('preset'));
 	const field = String(this.getCurrentNodeParameter('&field') ?? '');
 	if (!presetId || !field) return { results: [] };
+
+	// /input-values only enumerates picklists, and the preset already declares which inputs those
+	// are — so a free-text field needs no request at all. Skipping it matters: the endpoint runs two
+	// OpenSearch fetches before deciding to reject, and this hook fires on every keystroke.
+	// A failure here must not break the picker: fall through and let /input-values decide.
+	let preset: Preset | null = null;
+	try {
+		preset = await fetchPreset(this);
+	} catch {
+		preset = null;
+	}
+	if (preset && !isPicklistInput(preset.inputs?.find((i) => i.field === field))) {
+		return typedValueOnly(filter);
+	}
+
 	const qs: Record<string, string> = { field };
 	if (filter) qs.query = filter;
 	try {
@@ -129,12 +172,10 @@ export async function searchInputValues(
 		);
 		return { results: toValueOptions((response.results as InputValue[]) ?? []) };
 	} catch (error) {
-		// /input-values serves only picklist inputs; a free-text (or unknown) field returns 400.
-		// Offer the typed text itself so "From List" still captures a free-text value without
-		// forcing a switch to "By Value". Surface anything else (auth, transient, 5xx).
+		// Still reachable when the cached preset disagrees with the server: the type gate above is
+		// an optimisation, the 400 is the authority. Surface anything else (auth, transient, 5xx).
 		if (is400(error)) {
-			const typed = filter?.trim();
-			return { results: typed ? [{ name: typed, value: typed }] : [] };
+			return typedValueOnly(filter);
 		}
 		throw new NodeApiError(this.getNode(), error as JsonObject);
 	}
