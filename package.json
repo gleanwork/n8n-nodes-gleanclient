@@ -1,6 +1,6 @@
 {
 	"name": "@gleanwork/n8n-nodes-gleanclient",
-	"version": "0.4.1",
+	"version": "0.4.2",
 	"description": "n8n nodes to interact with Glean",
 	"keywords": [
 		"n8n-community-node-package",

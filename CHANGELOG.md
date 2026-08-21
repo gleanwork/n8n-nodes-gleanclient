@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2
+
+- Glean Trigger: send `X-Glean-Include-Experimental: true` on Platform API calls and the credential test. Without it the experimental triggers endpoints 404.
+
 ## 0.4.1
 
 - Glean Trigger: no longer declares `usableAsTool` — trigger nodes can't be invoked as AI tools, so it's kept out of the AI tool picker (satisfies the n8n community-node scanner's `node-usable-as-tool`). Bumps `@n8n/eslint-plugin-community-nodes` and `@n8n/node-cli` so `lint:community` enforces this pre-merge.

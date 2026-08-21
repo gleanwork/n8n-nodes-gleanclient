@@ -46,6 +46,7 @@ export class GleanTriggerApi implements ICredentialType {
       url: '/api/trigger-presets',
       method: 'GET',
       qs: { page_size: 1 },
+      headers: { 'X-Glean-Include-Experimental': 'true' },
     },
   };
 }
