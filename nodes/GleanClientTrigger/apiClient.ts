@@ -7,7 +7,7 @@ import type {
 	IDataObject,
 } from 'n8n-workflow';
 
-import { CREDENTIAL_API_KEY, CREDENTIAL_OAUTH2 } from './constants';
+import { CREDENTIAL_API_KEY, CREDENTIAL_OAUTH2, INCLUDE_EXPERIMENTAL_HEADER } from './constants';
 
 // Robust 404 check across the shapes n8n/HTTP errors can take.
 export function is404(error: unknown): boolean {
@@ -78,6 +78,7 @@ export async function gleanApiRequest(
 	const options: IHttpRequestOptions = {
 		method,
 		url: `${baseUrl}/api${path}`,
+		headers: { [INCLUDE_EXPERIMENTAL_HEADER]: 'true' },
 		qs,
 		json: true,
 	};

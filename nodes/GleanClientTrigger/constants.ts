@@ -24,6 +24,8 @@ export const SELF_DELIVER_DELAY_MS = 500;
 export const PREVIEW_DELIVERY_ATTEMPTS = 5;
 export const CONTENT_TYPE_HEADER = 'content-type';
 export const APPLICATION_JSON = 'application/json';
+// The triggers API is x-glean-experimental; without this opt-in the backend 404s.
+export const INCLUDE_EXPERIMENTAL_HEADER = 'X-Glean-Include-Experimental';
 // Prefix for the synthetic webhook-id of a self-delivered preview event.
 export const PREVIEW_EVENT_ID_PREFIX = 'msg_test_';
 // n8n execution mode for editor "Execute" runs (vs 'trigger' for an active workflow).
